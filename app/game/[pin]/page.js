@@ -42,11 +42,24 @@ export default function GameRoom({ params }) {
     return () => newSocket.disconnect();
   }, [pin, playerName, role]);
 
+  const [submittedGuesses, setSubmittedGuesses] = useState([]);
+
   const handleSubmitGuess = () => {
     if (socket && guess.trim()) {
+      // Emit the guess to the server
       socket.emit('submit-guess', { pin, playerName, guess });
+      
+      // Update local state with the new guess
+      setSubmittedGuesses(prevGuesses => [
+        ...prevGuesses,
+        { playerName, guess }
+      ]);
+  
+      // Clear the guess input field after submission
+      setGuess('');
     }
   };
+  
 
   const startGame = () => {
     if (socket && role === 'host') {
@@ -97,14 +110,23 @@ export default function GameRoom({ params }) {
         </div>
       )}
 
+
       {gameState === 'results' && (
         <div>
           <h2 className="text-2xl mb-4">Results</h2>
-          {results && Object.entries(results).map(([word, count]) => (
+             <h2 className="text-2xl mb-4">Submitted Guesses</h2>
+              <ul>
+                {submittedGuesses.map((entry, index) => (
+                  <li key={index}>
+                    <span className="font-bold">{entry.playerName}</span> guessed: {entry.guess}
+                  </li>
+                ))}
+              </ul>
+          {/* {results && Object.entries(results).map(([word, count]) => (
             <div key={word} className="mb-2">
               <span className="font-bold">{word}</span>: {count} matches
             </div>
-          ))}
+          ))} */}
         </div>
       )}
     </div>

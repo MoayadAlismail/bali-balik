@@ -24,7 +24,7 @@ export default function JoinGame() {
           placeholder="Enter your name"
           value={playerName}
           onChange={(e) => setPlayerName(e.target.value)}
-          className="w-full mb-4 p-3 rounded border"
+          className="w-full mb-4 p-3 rounded border text-black"
         />
         
         <input
@@ -32,7 +32,7 @@ export default function JoinGame() {
           placeholder="Enter game PIN"
           value={pin}
           onChange={(e) => setPin(e.target.value)}
-          className="w-full mb-4 p-3 rounded border"
+          className="w-full mb-4 p-3 rounded border text-black"
         />
         
         <button

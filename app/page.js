@@ -12,6 +12,7 @@ export default function Home() {
             href="/host"
             className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-lg h-12 px-8"
           >
+
             Host Game
           </Link>
           

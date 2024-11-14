@@ -24,6 +24,8 @@ const topics = [
   // Add more topics
 ];
 
+const ROUND_TIME = 10; // 10 seconds per round
+
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
 
@@ -35,12 +37,13 @@ io.on('connection', (socket) => {
       rooms.set(pin, {
         players: [],
         guesses: new Map(),
-        host: role === 'host' ? socket.id : null
+        host: role === 'host' ? socket.id : null,
+        timer: null
       });
     }
     
     const room = rooms.get(pin);
-    if (playerName) {
+    if (playerName && !room.players.includes(playerName)) {
       room.players.push(playerName);
     }
     if (role === 'host') {
@@ -57,9 +60,28 @@ io.on('connection', (socket) => {
     if (room && socket.id === room.host) {
       console.log('Starting game for pin:', pin);
       const randomTopic = topics[Math.floor(Math.random() * topics.length)];
-      room.guesses.clear(); // Clear any previous guesses
+      room.guesses.clear();
       room.currentTopic = randomTopic;
-      io.to(pin).emit('game-started', randomTopic);
+      
+      // Clear any existing timer
+      if (room.timer) {
+        clearInterval(room.timer);
+      }
+      
+      // Start the timer
+      let timeLeft = ROUND_TIME;
+      io.to(pin).emit('game-started', { topic: randomTopic, timeLeft });
+      
+      room.timer = setInterval(() => {
+        timeLeft--;
+        io.to(pin).emit('timer-update', timeLeft);
+        
+        if (timeLeft <= 0) {
+          clearInterval(room.timer);
+          const matches = calculateMatches(room.guesses);
+          io.to(pin).emit('game-results', matches);
+        }
+      }, 1000);
     } else {
       console.log('Invalid start game request:', { pin, socketId: socket.id, host: room?.host });
     }
@@ -69,9 +91,11 @@ io.on('connection', (socket) => {
     console.log('Guess submitted:', { pin, playerName, guess });
     const room = rooms.get(pin);
     if (room) {
-      room.guesses.set(playerName, guess);
+      room.guesses.set(playerName, guess.toLowerCase().trim());
       
+      // If all players have submitted their guesses, end the round early
       if (room.guesses.size === room.players.length) {
+        clearInterval(room.timer);
         const matches = calculateMatches(room.guesses);
         io.to(pin).emit('game-results', matches);
       }
@@ -83,6 +107,9 @@ io.on('connection', (socket) => {
     // Clean up rooms where this socket was the host
     for (const [pin, room] of rooms.entries()) {
       if (room.host === socket.id) {
+        if (room.timer) {
+          clearInterval(room.timer);
+        }
         rooms.delete(pin);
       }
     }
@@ -94,7 +121,7 @@ function calculateMatches(guesses) {
   const matches = {};
   
   guessesList.forEach((guess) => {
-    const count = guessesList.filter(g => g.toLowerCase() === guess.toLowerCase()).length;
+    const count = guessesList.filter(g => g === guess).length;
     if (count > 1) {
       matches[guess] = count;
     }

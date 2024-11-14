@@ -37,7 +37,7 @@ export default function JoinGame() {
         
         <button
           type="submit"
-          className="w-full rounded-full bg-foreground text-background px-6 py-3"
+          className="w-full rounded-full bg-foreground text-background px-6 py-3 text-black"
         >
           Join Game
         </button>

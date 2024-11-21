@@ -17,7 +17,9 @@
     "react": "19.0.0-rc-66855b96-20241106",
     "react-dom": "19.0.0-rc-66855b96-20241106",
     "socket.io": "^4.7.2",
-    "socket.io-client": "^4.8.1"
+    "socket.io-client": "^4.8.1",
+    "framer-motion": "^10.16.4",
+    "@next/font": "^13.4.19"
   },
   "devDependencies": {
     "eslint": "^8",

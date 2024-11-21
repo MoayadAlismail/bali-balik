@@ -3,8 +3,13 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --primary-color: #8B5CF6;
+  --secondary-color: #3B82F6;
+  --accent-color: #10B981;
+  --background-start: #EDE9FE;
+  --background-end: #DBEAFE;
+  --text-primary: #1F2937;
+  --text-secondary: #4B5563;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -18,4 +23,15 @@ body {
   color: var(--foreground);
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Add some global animations */
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+.float-animation {
+  animation: float 3s ease-in-out infinite;
 }

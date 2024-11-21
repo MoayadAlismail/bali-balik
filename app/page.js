@@ -1,37 +1,66 @@
 'use client'
 import { motion } from 'framer-motion'
+import { useRouter } from 'next/navigation'
 
 export default function Home() {
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4">
-      <motion.h1 
-        initial={{ scale: 0.5, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ duration: 0.5 }}
-        className="text-5xl font-bold text-purple-600 mb-8"
-      >
-        يلا نلعب!
-      </motion.h1>
-      
-      <div className="space-y-4">
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          className="w-64 p-4 bg-blue-500 hover:bg-blue-600 text-white rounded-lg shadow-lg transition-colors"
-          onClick={() => router.push('/host')}
-        >
-          إنشاء لعبة جديدة
-        </motion.button>
+  const router = useRouter()
 
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          className="w-64 p-4 bg-green-500 hover:bg-green-600 text-white rounded-lg shadow-lg transition-colors"
-          onClick={() => router.push('/join')}
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.3
+      }
+    }
+  }
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1
+    }
+  }
+
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-[#FF9A8B] to-[#FF6B6B]">
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="text-center"
+      >
+        <motion.h1 
+          variants={itemVariants}
+          className="text-6xl font-bold text-white mb-12 drop-shadow-lg"
         >
-          انضم للعبة
-        </motion.button>
-      </div>
+          يلا نلعب! 🎮
+        </motion.h1>
+        
+        <motion.div 
+          variants={itemVariants}
+          className="space-y-6"
+        >
+          <motion.button
+            whileHover={{ scale: 1.05, backgroundColor: '#4A90E2' }}
+            whileTap={{ scale: 0.95 }}
+            className="w-72 p-5 bg-[#5C9CE5] text-white rounded-xl text-xl font-bold shadow-lg hover:shadow-xl transition-all duration-300"
+            onClick={() => router.push('/host')}
+          >
+            إنشاء لعبة جديدة 🎲
+          </motion.button>
+
+          <motion.button
+            whileHover={{ scale: 1.05, backgroundColor: '#45B26B' }}
+            whileTap={{ scale: 0.95 }}
+            className="w-72 p-5 bg-[#4CAF50] text-white rounded-xl text-xl font-bold shadow-lg hover:shadow-xl transition-all duration-300"
+            onClick={() => router.push('/join')}
+          >
+            انضم للعبة 🎯
+          </motion.button>
+        </motion.div>
+      </motion.div>
     </div>
   )
 }

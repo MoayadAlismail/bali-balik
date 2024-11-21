@@ -3,35 +3,60 @@
 @tailwind utilities;
 
 :root {
-  --primary-color: #8B5CF6;
-  --secondary-color: #3B82F6;
-  --accent-color: #10B981;
-  --background-start: #EDE9FE;
-  --background-end: #DBEAFE;
-  --text-primary: #1F2937;
-  --text-secondary: #4B5563;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --primary-gradient-start: #FF9A8B;
+  --primary-gradient-end: #FF6B6B;
+  --button-blue: #5C9CE5;
+  --button-green: #4CAF50;
+  --text-primary: #2D3748;
+  --text-secondary: #4A5568;
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  @apply antialiased;
+  background: linear-gradient(135deg, var(--primary-gradient-start), var(--primary-gradient-end));
+  min-height: 100vh;
 }
 
-/* Add some global animations */
+/* Custom animations */
 @keyframes float {
-  0% { transform: translateY(0px); }
+  0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-10px); }
-  100% { transform: translateY(0px); }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
 }
 
 .float-animation {
   animation: float 3s ease-in-out infinite;
+}
+
+.pulse-animation {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* Custom button styles */
+.game-button {
+  @apply transition-all duration-300 transform hover:scale-105 active:scale-95;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.game-button:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Input styles */
+input {
+  @apply transition-all duration-300;
+}
+
+input:focus {
+  box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.3);
+}
+
+/* Glass morphism effects */
+.glass {
+  @apply bg-white/30 backdrop-blur-md;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }

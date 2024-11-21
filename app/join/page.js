@@ -1,26 +1,55 @@
 'use client';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 
 export default function JoinGame() {
+  const [pin, setPin] = useState('');
+  const router = useRouter();
+
+  const handleJoin = () => {
+    if (pin.trim()) {
+      router.push(`/game/${pin}`);
+    }
+  };
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-purple-100 to-blue-100 p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#FF9A8B] to-[#FF6B6B] p-4">
       <motion.div
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="bg-white p-8 rounded-xl shadow-xl"
+        className="bg-white/90 backdrop-blur-md p-8 rounded-2xl shadow-2xl w-full max-w-md"
       >
-        <h1 className="text-3xl font-bold text-purple-600 mb-6">ادخل رمز اللعبة</h1>
-        <input
-          type="text"
-          placeholder="رمز اللعبة..."
-          className="w-full p-3 border-2 border-purple-300 rounded-lg focus:border-purple-500 outline-none"
-        />
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          className="w-full mt-4 p-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+        <motion.h1 
+          className="text-4xl font-bold text-[#FF6B6B] mb-8 text-center"
+          initial={{ scale: 0.9 }}
+          animate={{ scale: 1 }}
+          transition={{ type: "spring", stiffness: 300 }}
         >
-          انضم للعبة
+          ادخل رمز اللعبة
+        </motion.h1>
+        
+        <motion.div
+          whileHover={{ scale: 1.02 }}
+          className="relative mb-6"
+        >
+          <input
+            type="text"
+            value={pin}
+            onChange={(e) => setPin(e.target.value)}
+            placeholder="ادخل الرمز هنا..."
+            className="w-full p-4 text-2xl text-center border-3 border-[#FF9A8B] rounded-xl focus:border-[#FF6B6B] outline-none bg-white/50 backdrop-blur-sm transition-all"
+            maxLength={6}
+          />
+        </motion.div>
+
+        <motion.button
+          whileHover={{ scale: 1.05, backgroundColor: '#FF6B6B' }}
+          whileTap={{ scale: 0.95 }}
+          onClick={handleJoin}
+          className="w-full p-4 bg-[#FF9A8B] text-white rounded-xl text-xl font-bold shadow-lg hover:shadow-xl transition-all duration-300"
+        >
+          يلا نلعب! 🎮
         </motion.button>
       </motion.div>
     </div>

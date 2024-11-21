@@ -15,13 +15,15 @@ var allowCrossDomain = function(req, res, next) {
   next();
 }
 
+
+
 app.configure(function() {
   app.use(allowCrossDomain);
 });
 
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: process.env.FRONTEND_URL || "http://balibalik.com",
     methods: ["GET", "POST"]
   }
 });

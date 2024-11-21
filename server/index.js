@@ -13,13 +13,7 @@ const allowedOrigins = [
 
 // Express CORS
 app.use(cors({
-  origin: function(origin, callback) {
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: allowedOrigins,
   methods: ['GET', 'POST', 'OPTIONS'],
   credentials: true,
   optionsSuccessStatus: 200
@@ -27,7 +21,7 @@ app.use(cors({
 
 const httpServer = createServer(app);
 
-// Socket.IO setup
+// Socket.IO setup with updated configuration
 const io = new Server(httpServer, {
   cors: {
     origin: allowedOrigins,
@@ -35,16 +29,13 @@ const io = new Server(httpServer, {
     credentials: true,
     allowedHeaders: ["*"]
   },
+  pingTimeout: 60000,
+  pingInterval: 25000,
+  upgradeTimeout: 30000,
   allowEIO3: true,
-  transports: ['websocket', 'polling']
-});
-
-// Add this before other middleware
-app.use((req, res, next) => {
-  if (req.headers['x-forwarded-proto'] !== 'https') {
-    return res.redirect(['https://', req.get('Host'), req.url].join(''));
-  }
-  next();
+  transports: ['polling', 'websocket'],
+  maxHttpBufferSize: 1e8,
+  path: '/socket.io/'
 });
 
 // Health check endpoint
@@ -55,6 +46,6 @@ app.get('/health', (req, res) => {
 // Rest of your server code...
 
 const PORT = process.env.PORT || 3001;
-httpServer.listen(PORT, () => {
+httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
 }); 

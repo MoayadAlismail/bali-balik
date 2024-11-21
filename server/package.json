@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next build && node index.js && next start "    
   },
   "dependencies": {
     "cors": "^2.8.5",
@@ -11,3 +13,4 @@
     "socket.io": "^4.7.2"
   }
 } 
+

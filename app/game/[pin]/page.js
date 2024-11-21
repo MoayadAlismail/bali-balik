@@ -15,6 +15,8 @@ export default function GameRoom({ params }) {
   const [guess, setGuess] = useState('');
   const [results, setResults] = useState(null);
   const [players, setPlayers] = useState([]);
+  const [timeLeft, setTimeLeft] = useState(null);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
 
   useEffect(() => {
     const newSocket = io('http://localhost:3001');
@@ -27,10 +29,21 @@ export default function GameRoom({ params }) {
       setPlayers(playersList);
     });
 
-    newSocket.on('game-started', (topic) => {
+    newSocket.on('game-started', ({ topic, timeLeft }) => {
       console.log('Game started with topic:', topic);
       setGameState('playing');
       setCurrentTopic(topic);
+      setTimeLeft(timeLeft);
+      setHasSubmitted(false);
+      setGuess(''); // Reset guess for new round
+    });
+
+    newSocket.on('timer-update', (time) => {
+      console.log('Timer update:', time);
+      setTimeLeft(time);
+      if (time <= 0) {
+        setGameState('results');
+      }
     });
 
     newSocket.on('game-results', (matchResults) => {
@@ -68,6 +81,13 @@ export default function GameRoom({ params }) {
     }
   };
 
+  // Handle enter key press for submitting guess
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !hasSubmitted) {
+      handleSubmitGuess();
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-8">
       {gameState === 'waiting' && (
@@ -81,7 +101,7 @@ export default function GameRoom({ params }) {
               ))}
             </ul>
           </div>
-          {role === 'host' && (
+          {role === 'host' && players.length > 0 && (
             <button
               onClick={startGame}
               className="rounded-full bg-foreground text-background px-6 py-3 hover:bg-opacity-90 transition-colors"
@@ -94,25 +114,42 @@ export default function GameRoom({ params }) {
 
       {gameState === 'playing' && (
         <div className="text-center">
+          <div className="mb-6">
+            <div className="text-6xl font-bold mb-2">{timeLeft}</div>
+            <div className="text-sm text-gray-600">seconds remaining</div>
+          </div>
+          
           <h2 className="text-2xl mb-4">Topic: {currentTopic}</h2>
-          <input
-            type="text"
-            value={guess}
-            onChange={(e) => setGuess(e.target.value)}
-            className="mb-4 p-3 rounded border"
-          />
-          <button
-            onClick={handleSubmitGuess}
-            className="rounded-full bg-foreground text-background px-6 py-3"
-          >
-            Submit Guess
-          </button>
+          
+          {!hasSubmitted ? (
+            <div>
+              <input
+                type="text"
+                value={guess}
+                onChange={(e) => setGuess(e.target.value)}
+                onKeyPress={handleKeyPress}
+                className="mb-4 p-3 rounded border"
+                placeholder="Enter your guess"
+                autoFocus
+              />
+              <button
+                onClick={handleSubmitGuess}
+                className="rounded-full bg-foreground text-background px-6 py-3"
+              >
+                Submit Guess
+              </button>
+            </div>
+          ) : (
+            <div className="text-green-600 text-lg">
+              Guess submitted! Waiting for other players...
+            </div>
+          )}
         </div>
       )}
 
 
       {gameState === 'results' && (
-        <div>
+        <div className="text-center">
           <h2 className="text-2xl mb-4">Results</h2>
              <h2 className="text-2xl mb-4">Submitted Guesses</h2>
               <ul>

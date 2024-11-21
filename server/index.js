@@ -40,12 +40,18 @@ const io = new Server(httpServer, {
 
 const rooms = new Map();
 const topics = [
-  "Things you find in a kitchen",
-  "Popular movies",
-  "Sports",
-  "Animals",
-  "Foods",
-  // Add more topics
+  "أشياء تلقاها في المطبخ",
+  "أفلام مشهورة",
+  "رياضات",
+  "حيوانات",
+  "مأكولات",
+  "مدن عالمية",
+  "أدوات مدرسية",
+  "ألوان",
+  "أجهزة إلكترونية",
+  "فواكه وخضروات",
+  "أسماء عربية",
+  "شخصيات تاريخية",
 ];
 
 const ROUND_TIME = 10; // 10 seconds per round

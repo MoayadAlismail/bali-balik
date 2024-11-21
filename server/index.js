@@ -24,7 +24,7 @@ const httpServer = createServer(app);
 // Socket.IO setup with updated configuration
 const io = new Server(httpServer, {
   cors: {
-    origin: allowedOrigins,
+    origin: "*",
     methods: ["GET", "POST", "OPTIONS"],
     credentials: true,
     allowedHeaders: ["*"]

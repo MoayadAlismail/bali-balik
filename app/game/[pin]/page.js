@@ -93,9 +93,9 @@ export default function GameRoom({ params }) {
     <div className="min-h-screen flex flex-col items-center justify-center p-8">
       {gameState === 'waiting' && (
         <div className="text-center">
-          <h2 className="text-2xl mb-4">Game PIN: {pin}</h2>
+          <h2 className="text-2xl mb-4">كود الغرفة: {pin}</h2>
           <div className="mb-4">
-            <h3 className="text-xl mb-2">Players:</h3>
+            <h3 className="text-xl mb-2">اللاعبين:</h3>
             <ul className="space-y-2">
               {players.map((player, index) => (
                 <li key={index} className="text-lg">{player}</li>
@@ -107,7 +107,7 @@ export default function GameRoom({ params }) {
               onClick={startGame}
               className="rounded-full bg-foreground text-background px-6 py-3 hover:bg-opacity-90 transition-colors"
             >
-              Start Game
+              ابدأ
             </button>
           )}
         </div>
@@ -117,10 +117,10 @@ export default function GameRoom({ params }) {
         <div className="text-center">
           <div className="mb-6">
             <div className="text-6xl font-bold mb-2">{timeLeft}</div>
-            <div className="text-sm text-gray-600">seconds remaining</div>
+            <div className="text-sm text-gray-600">ثواني باقية</div>
           </div>
           
-          <h2 className="text-2xl mb-4">Topic: {currentTopic}</h2>
+          <h2 className="text-2xl mb-4">الموضوع: {currentTopic}</h2>
           
           {!hasSubmitted ? (
             <div>
@@ -137,12 +137,12 @@ export default function GameRoom({ params }) {
                 onClick={handleSubmitGuess}
                 className="rounded-full bg-foreground text-background px-6 py-3"
               >
-                Submit Guess
+                تقديم التخمين
               </button>
             </div>
           ) : (
             <div className="text-green-600 text-lg">
-              Guess submitted! Waiting for other players...
+               انتظار اللاعبين الآخرين..
             </div>
           )}
         </div>
@@ -151,11 +151,12 @@ export default function GameRoom({ params }) {
 
       {gameState === 'results' && (
         <div className="text-center">
-          <h2 className="text-2xl mb-4">Results</h2>
-             <h2 className="text-2xl mb-4">Submitted Guesses</h2>
+          <h2 className="text-2xl mb-4">النتائج</h2>
+             <h2 className="text-2xl mb-4">التخمينات المقدمة</h2>
               <ul>
                 {submittedGuesses.map((entry, index) => (
                   <li key={index}>
+                    {/* formatting issue, names dont mix well with arabic (right to left) text */}
                     <span className="font-bold">{entry.playerName}</span> guessed: {entry.guess}
                   </li>
                 ))}

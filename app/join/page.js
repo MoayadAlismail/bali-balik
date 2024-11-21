@@ -40,7 +40,7 @@ export default function JoinGame() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-8">
-      <h1 className="text-3xl font-bold mb-8">Join a Game</h1>
+      <h1 className="text-3xl font-bold mb-8">انضم للغرفة</h1>
       
       <form onSubmit={handleJoin} className="w-full max-w-sm">
         {error && (
@@ -51,7 +51,7 @@ export default function JoinGame() {
         
         <input
           type="text"
-          placeholder="Enter your name"
+          placeholder="ادخل اسمك"
           value={playerName}
           onChange={(e) => setPlayerName(e.target.value)}
           className="w-full mb-4 p-3 rounded border text-black"
@@ -59,7 +59,7 @@ export default function JoinGame() {
         
         <input
           type="text"
-          placeholder="ادخل كود اللعبة"
+          placeholder="ادخل كود الغرفة"
           value={pin}
           onChange={(e) => setPin(e.target.value)}
           className="w-full mb-4 p-3 rounded border text-black"
@@ -69,7 +69,7 @@ export default function JoinGame() {
           type="submit"
           className="w-full rounded-full bg-foreground text-background px-6 py-3"
         >
-          انضم اللعبة
+          انضم للعبة
         </button>
       </form>
     </div>

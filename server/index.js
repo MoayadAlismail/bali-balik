@@ -26,8 +26,22 @@ const topics = [
 
 const ROUND_TIME = 10; // 10 seconds per round
 
+const activeGames = new Set();
+
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
+
+  socket.on('create-game', (pin) => {
+    console.log('Creating game:', pin);
+    activeGames.add(pin);
+    socket.emit('game-created', pin);
+  });
+
+  socket.on('validate-game', (pin, callback) => {
+    const isValid = activeGames.has(pin);
+    console.log('Validating game:', pin, isValid);
+    callback(isValid);
+  });
 
   socket.on('join-room', ({ pin, playerName, role }) => {
     console.log('Join room:', { pin, playerName, role });
@@ -111,6 +125,7 @@ io.on('connection', (socket) => {
           clearInterval(room.timer);
         }
         rooms.delete(pin);
+        activeGames.delete(pin);
       }
     }
   });

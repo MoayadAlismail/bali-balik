@@ -1,22 +1,25 @@
 // activeGames.js
 
-// Export the activeGames array
-const activeGames = [];
+// Store active games in a Set for efficient lookup
+const activeGames = new Set();
 
-// Utility functions to manage the activeGames array
+// Add a new game
 const addGame = (pin) => {
-    if (!activeGames.includes(pin)) {
-        activeGames.push(pin);
-    }
+  activeGames.add(pin);
+  console.log(`Game ${pin} added. Active games:`, Array.from(activeGames));
 };
 
+// Remove a game
 const removeGame = (pin) => {
-    const index = activeGames.indexOf(pin);
-    if (index !== -1) {
-        activeGames.splice(index, 1);
-    }
+  activeGames.delete(pin);
+  console.log(`Game ${pin} removed. Active games:`, Array.from(activeGames));
 };
 
-const validateGame = (pin) => activeGames.includes(pin);
+// Validate if a game exists
+const validateGame = (pin) => {
+  const isValid = activeGames.has(pin);
+  console.log(`Validating game ${pin}:`, isValid);
+  return isValid;
+};
 
 module.exports = { activeGames, addGame, removeGame, validateGame };

@@ -1,21 +1,39 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-const { activeGames, addGame, removeGame, validateGame } = require('../activeGames/activeGames');
+import io from 'socket.io-client';
+import config from '@/config';
 
 export default function JoinGame() {
   const [pin, setPin] = useState('');
   const [playerName, setPlayerName] = useState('');
+  const [error, setError] = useState('');
+  const [socket, setSocket] = useState(null);
   const router = useRouter();
+
+  useEffect(() => {
+    const newSocket = io(config.socketUrl);
+    setSocket(newSocket);
+    return () => newSocket.disconnect();
+  }, []);
 
   const handleJoin = (e) => {
     e.preventDefault();
-    if (pin && playerName && validateGame(pin)) {
-      router.push(`/game/${pin}?role=player&name=${encodeURIComponent(playerName)}`);
+    setError('');
+
+    if (!pin || !playerName) {
+      setError('Please enter both name and PIN');
+      return;
     }
-    else {
-      console.log("active games:",activeGames);
-      console.log("ERROR: Please check the name and the validity of your PIN");
+
+    if (socket) {
+      socket.emit('validate-game', pin, (isValid) => {
+        if (isValid) {
+          router.push(`/game/${pin}?role=player&name=${encodeURIComponent(playerName)}`);
+        } else {
+          setError('Invalid game PIN. Please check and try again.');
+        }
+      });
     }
   };
 
@@ -24,6 +42,12 @@ export default function JoinGame() {
       <h1 className="text-3xl font-bold mb-8">Join a Game</h1>
       
       <form onSubmit={handleJoin} className="w-full max-w-sm">
+        {error && (
+          <div className="mb-4 p-3 rounded bg-red-100 text-red-700">
+            {error}
+          </div>
+        )}
+        
         <input
           type="text"
           placeholder="Enter your name"
@@ -42,7 +66,7 @@ export default function JoinGame() {
         
         <button
           type="submit"
-          className="w-full rounded-full bg-foreground text-background px-6 py-3 text-black"
+          className="w-full rounded-full bg-foreground text-background px-6 py-3"
         >
           Join Game
         </button>

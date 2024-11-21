@@ -1,26 +1,31 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-const { activeGames, addGame, removeGame, validateGame } = require('../activeGames/activeGames');
-
-
+import io from 'socket.io-client';
+import config from '@/config';
 
 export default function HostGame() {
   const [gamePin, setGamePin] = useState('');
+  const [socket, setSocket] = useState(null);
   const router = useRouter();
 
+  useEffect(() => {
+    const newSocket = io(config.socketUrl);
+    setSocket(newSocket);
+    return () => newSocket.disconnect();
+  }, []);
+
   const generatePin = () => {
-    // Generate a random 6-digit pin
     const pin = Math.floor(100000 + Math.random() * 900000).toString();
     setGamePin(pin);
+    if (socket) {
+      socket.emit('create-game', pin);
+    }
   };
 
   const startGame = () => {
     if (gamePin) {
-      addGame(gamePin);
-      console.log(activeGames);
       router.push(`/game/${gamePin}?role=host`);
-
     }
   };
 

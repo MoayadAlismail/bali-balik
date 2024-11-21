@@ -5,7 +5,9 @@ const config = {
     withCredentials: true,
     forceNew: true,
     reconnection: true,
-    timeout: 10000
+    timeout: 10000,
+    secure: true,
+    rejectUnauthorized: false
   }
 };
 

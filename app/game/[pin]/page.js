@@ -20,9 +20,22 @@ export default function GameRoom({ params }) {
   const [hasSubmitted, setHasSubmitted] = useState(false);
 
   useEffect(() => {
-    const newSocket = io(config.socketUrl);
+    const newSocket = io(config.socketUrl, {
+      ...config.socketOptions,
+      path: '/socket.io/',
+      autoConnect: true
+    });
+    
+    // Add error handling
+    newSocket.on('connect_error', (error) => {
+      console.error('Socket connection error:', error);
+    });
+
+    newSocket.on('error', (error) => {
+      console.error('Socket error:', error);
+    });
+
     setSocket(newSocket);
-    // test
 
     newSocket.emit('join-room', { pin, playerName, role });
 

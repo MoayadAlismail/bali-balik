@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 export default function JoinGame() {
   const [pin, setPin] = useState('');
   const router = useRouter();
+  const [playerName, setPlayerName] = useState('');
+
 
   const handleJoin = () => {
     if (pin.trim()) {
@@ -33,12 +35,20 @@ export default function JoinGame() {
           whileHover={{ scale: 1.02 }}
           className="relative mb-6"
         >
+
+          <input
+          type="text"
+          placeholder="ادخل اسمك"
+          value={playerName}
+          onChange={(e) => setPlayerName(e.target.value)}
+          className="w-full p-4 text-2xl text-center border-3 border-[#FF9A8B] rounded-xl focus:border-[#FF6B6B] outline-black bg-white/50 backdrop-blur-sm transition-all"
+        />
           <input
             type="text"
             value={pin}
             onChange={(e) => setPin(e.target.value)}
             placeholder="ادخل الرمز هنا..."
-            className="w-full p-4 text-2xl text-center border-3 border-[#FF9A8B] rounded-xl focus:border-[#FF6B6B] outline-none bg-white/50 backdrop-blur-sm transition-all"
+            className="w-full p-4 text-2xl text-center border-3 border-[#FF9A8B] rounded-xl focus:border-[#FF6B6B] outline-black bg-white/50 backdrop-blur-sm transition-all"
             maxLength={6}
           />
         </motion.div>

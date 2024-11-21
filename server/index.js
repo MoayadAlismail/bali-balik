@@ -7,7 +7,7 @@ const cors = require('cors');
 const express = require("express");
 
 const app = express();
-const port = process.env.SERVER_PORT || 8000;
+const port = process.env.SERVER_PORT || 3001;
 
 // Add Access Control Allow Origin headers
 app.use((req, res, next) => {
@@ -19,16 +19,17 @@ app.use((req, res, next) => {
   next();
 });
 
-app.get("/api", (req, res) => {
-  res.json("Hello");
-});
-
-app.listen(port, () => console.log(Listening on port ${port}));
 app.use(cors({
   origin: ['https://www.balibalik.com', 'http://localhost:3000'],
   methods: ['GET', 'POST'],
   credentials: true
 }));
+
+app.get("/api", (req, res) => {
+  res.json("Hello");
+});
+
+app.listen(port, () => console.log(`Listening on port ${port})`));
 
 app.get('/health', (req, res) => {
   res.status(200).send('OK');

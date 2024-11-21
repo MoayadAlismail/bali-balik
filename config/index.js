@@ -2,7 +2,10 @@ const config = {
   socketUrl: process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001',
   socketOptions: {
     transports: ['websocket', 'polling'],
-    withCredentials: true
+    withCredentials: true,
+    forceNew: true,
+    reconnection: true,
+    timeout: 10000
   }
 };
 

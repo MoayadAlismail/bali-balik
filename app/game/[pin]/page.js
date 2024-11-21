@@ -2,6 +2,7 @@
 import { useEffect, useState, use } from 'react';
 import { useSearchParams } from 'next/navigation';
 import io from 'socket.io-client';
+import config from '@/config';
 
 export default function GameRoom({ params }) {
   const searchParams = useSearchParams();
@@ -19,8 +20,9 @@ export default function GameRoom({ params }) {
   const [hasSubmitted, setHasSubmitted] = useState(false);
 
   useEffect(() => {
-    const newSocket = io('http://localhost:3001');
+    const newSocket = io(config.socketUrl);
     setSocket(newSocket);
+    // test
 
     newSocket.emit('join-room', { pin, playerName, role });
 

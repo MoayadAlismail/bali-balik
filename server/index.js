@@ -4,26 +4,28 @@ const { Server } = require('socket.io');
 const cors = require('cors');
 
 const app = express();
-app.use(cors());
+
+app.use(cors({
+  origin: ['https://www.balibalik.com', 'http://localhost:3000'],
+  methods: ['GET', 'POST'],
+  credentials: true
+}));
+
+app.get('/health', (req, res) => {
+  res.status(200).send('OK');
+});
 
 const httpServer = createServer(app);
 
-var allowCrossDomain = function(req, res, next) {
-  res.header('Access-Control-Allow-Origin', "*");
-  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
-  res.header('Access-Control-Allow-Headers', 'Content-Type');
-  next();
-}
-
-app.configure(function() {
-  app.use(allowCrossDomain);
-});
-
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
-    methods: ["GET", "POST"]
-  }
+    origin: ['https://www.balibalik.com', 'http://localhost:3000'],
+    methods: ["GET", "POST"],
+    credentials: true,
+    allowedHeaders: ["my-custom-header"]
+  },
+  allowEIO3: true,
+  transports: ['websocket', 'polling']
 });
 
 const rooms = new Map();
@@ -158,6 +160,6 @@ function calculateMatches(guesses) {
 }
 
 const PORT = process.env.PORT || 3001;
-httpServer.listen(PORT, () => {
+httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
 }); 

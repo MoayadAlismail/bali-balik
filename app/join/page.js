@@ -58,7 +58,7 @@ export default function JoinGame() {
         
         <input
           type="text"
-          placeholder="Enter game PIN"
+          placeholder="ادخل كود اللعبة"
           value={pin}
           onChange={(e) => setPin(e.target.value)}
           className="w-full mb-4 p-3 rounded border text-black"
@@ -68,7 +68,7 @@ export default function JoinGame() {
           type="submit"
           className="w-full rounded-full bg-foreground text-background px-6 py-3"
         >
-          Join Game
+          انضم اللعبة
         </button>
       </form>
     </div>

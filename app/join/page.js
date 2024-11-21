@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+const { activeGames, addGame, removeGame, validateGame } = require('../activeGames/activeGames');
 
 export default function JoinGame() {
   const [pin, setPin] = useState('');
@@ -9,8 +10,12 @@ export default function JoinGame() {
 
   const handleJoin = (e) => {
     e.preventDefault();
-    if (pin && playerName) {
+    if (pin && playerName && validateGame(pin)) {
       router.push(`/game/${pin}?role=player&name=${encodeURIComponent(playerName)}`);
+    }
+    else {
+      console.log("active games:",activeGames);
+      console.log("ERROR: Please check the name and the validity of your PIN");
     }
   };
 

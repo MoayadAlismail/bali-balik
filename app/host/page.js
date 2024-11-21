@@ -1,6 +1,9 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+const { activeGames, addGame, removeGame, validateGame } = require('../activeGames/activeGames');
+
+
 
 export default function HostGame() {
   const [gamePin, setGamePin] = useState('');
@@ -14,7 +17,10 @@ export default function HostGame() {
 
   const startGame = () => {
     if (gamePin) {
+      addGame(gamePin);
+      console.log(activeGames);
       router.push(`/game/${gamePin}?role=host`);
+
     }
   };
 

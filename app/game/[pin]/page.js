@@ -20,7 +20,13 @@ export default function GameRoom({ params }) {
   const [hasSubmitted, setHasSubmitted] = useState(false);
 
   useEffect(() => {
-    const newSocket = io(config.socketUrl);
+    const newSocket = io('https://bali-balik-production.up.railway.app', {
+      withCredentials: true,
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+    });
     setSocket(newSocket);
 
     newSocket.emit('join-room', { pin, playerName, role });

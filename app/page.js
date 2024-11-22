@@ -1,9 +1,36 @@
 'use client'
 import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import io from 'socket.io-client'
 
 export default function Home() {
   const router = useRouter()
+  const [socket, setSocket] = useState(null)
+
+  useEffect(() => {
+    // Initialize socket connection
+    const newSocket = io('https://bali-balik-production.up.railway.app', {
+      withCredentials: true,
+      transports: ['polling', 'websocket'],
+      path: '/socket.io/',
+    })
+
+    newSocket.on('connect', () => {
+      console.log('Connected to server')
+    })
+
+    newSocket.on('connect_error', (error) => {
+      console.error('Connection error:', error)
+    })
+
+    setSocket(newSocket)
+
+    // Cleanup on unmount
+    return () => {
+      if (newSocket) newSocket.disconnect()
+    }
+  }, []) // Empty dependency array means this runs once on mount
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -20,6 +47,18 @@ export default function Home() {
     visible: {
       y: 0,
       opacity: 1
+    }
+  }
+
+  const handleHostClick = () => {
+    if (socket) {
+      router.push('/host')
+    }
+  }
+
+  const handleJoinClick = () => {
+    if (socket) {
+      router.push('/join')
     }
   }
 
@@ -46,7 +85,7 @@ export default function Home() {
             whileHover={{ scale: 1.05, backgroundColor: '#4A90E2' }}
             whileTap={{ scale: 0.95 }}
             className="w-72 p-5 bg-[#5C9CE5] text-white rounded-xl text-xl font-bold shadow-lg hover:shadow-xl transition-all duration-300"
-            onClick={() => router.push('/host')}
+            onClick={handleHostClick}
           >
             إنشاء لعبة جديدة 🎲
           </motion.button>
@@ -55,7 +94,7 @@ export default function Home() {
             whileHover={{ scale: 1.05, backgroundColor: '#45B26B' }}
             whileTap={{ scale: 0.95 }}
             className="w-72 p-5 bg-[#4CAF50] text-white rounded-xl text-xl font-bold shadow-lg hover:shadow-xl transition-all duration-300"
-            onClick={() => router.push('/join')}
+            onClick={handleJoinClick}
           >
             انضم للعبة 🎮
           </motion.button>

@@ -35,7 +35,7 @@ export default function Home() {
           variants={itemVariants}
           className="text-6xl font-bold text-white mb-12 drop-shadow-lg"
         >
-          يلا نلعب! 🎮
+          تفكر باللي أفكر فيه؟! 🧠
         </motion.h1>
         
         <motion.div 
@@ -57,7 +57,7 @@ export default function Home() {
             className="w-72 p-5 bg-[#4CAF50] text-white rounded-xl text-xl font-bold shadow-lg hover:shadow-xl transition-all duration-300"
             onClick={() => router.push('/join')}
           >
-            انضم للعبة 🎯
+            انضم للعبة 🎮
           </motion.button>
         </motion.div>
       </motion.div>

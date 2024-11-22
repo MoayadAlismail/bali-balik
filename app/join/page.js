@@ -1,17 +1,44 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import io from 'socket.io-client';
 
 export default function JoinGame() {
   const [pin, setPin] = useState('');
-  const router = useRouter();
   const [playerName, setPlayerName] = useState('');
+  const [socket, setSocket] = useState(null);
+  const router = useRouter();
 
+  useEffect(() => {
+    // Initialize socket connection
+    const newSocket = io('https://bali-balik-production.up.railway.app', {
+      withCredentials: true,
+      transports: ['polling', 'websocket'],
+      path: '/socket.io/',
+    });
+
+    newSocket.on('connect', () => {
+      console.log('Connected to server');
+    });
+
+    newSocket.on('connect_error', (error) => {
+      console.error('Connection error:', error);
+    });
+
+    setSocket(newSocket);
+
+    // Cleanup on unmount
+    return () => {
+      if (newSocket) newSocket.disconnect();
+    };
+  }, []); // Empty dependency array means this runs once on mount
 
   const handleJoin = () => {
-    if (pin.trim()) {
-      router.push(`/game/${pin}`);
+    if (pin.trim() && playerName.trim() && socket) {
+      // Emit join event before navigating
+      socket.emit('join-room', { pin, playerName, role: 'player' });
+      router.push(`/game/${pin}?role=player&name=${encodeURIComponent(playerName)}`);
     }
   };
 

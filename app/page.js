@@ -1,36 +1,10 @@
 'use client'
 import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
-import { useState, useEffect } from 'react'
-import io from 'socket.io-client'
+import { useState } from 'react'
 
 export default function Home() {
   const router = useRouter()
-  const [socket, setSocket] = useState(null)
-
-  useEffect(() => {
-    // Initialize socket connection
-    const newSocket = io('https://bali-balik-production.up.railway.app', {
-      withCredentials: true,
-      transports: ['polling', 'websocket'],
-      path: '/socket.io/',
-    })
-
-    newSocket.on('connect', () => {
-      console.log('Connected to server')
-    })
-
-    newSocket.on('connect_error', (error) => {
-      console.error('Connection error:', error)
-    })
-
-    setSocket(newSocket)
-
-    // Cleanup on unmount
-    return () => {
-      if (newSocket) newSocket.disconnect()
-    }
-  }, []) // Empty dependency array means this runs once on mount
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -51,15 +25,11 @@ export default function Home() {
   }
 
   const handleHostClick = () => {
-    if (socket) {
-      router.push('/host')
-    }
+    router.push('/host')
   }
 
   const handleJoinClick = () => {
-    if (socket) {
-      router.push('/join')
-    }
+    router.push('/join')
   }
 
   return (

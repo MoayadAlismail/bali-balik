@@ -2,6 +2,7 @@ const express = require('express');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
+const crypto = require('crypto');
 
 const app = express();
 const httpServer = createServer(app);
@@ -35,8 +36,21 @@ const io = new Server(httpServer, {
 // Game state management
 const rooms = new Map();
 
+function generatePin() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
+
+  socket.on('create-game', () => {
+    const pin = generatePin();
+    rooms.set(pin, {
+      players: [],
+      host: socket.id
+    });
+    socket.emit('game-created', pin);
+  });
 
   socket.on('join-room', ({ pin, playerName, role }) => {
     socket.join(pin);
@@ -56,8 +70,29 @@ io.on('connection', (socket) => {
     io.to(pin).emit('player-joined', room.players);
   });
 
+  socket.on('start-game', (pin) => {
+    const room = rooms.get(pin);
+    if (room && room.host === socket.id) {
+      const topic = 'test topic'; // You can modify this to generate random topics
+      io.to(pin).emit('game-started', { topic, timeLeft: 60 });
+      
+      // Start the timer
+      let timeLeft = 60;
+      const timer = setInterval(() => {
+        timeLeft--;
+        io.to(pin).emit('timer-update', timeLeft);
+        
+        if (timeLeft <= 0) {
+          clearInterval(timer);
+          io.to(pin).emit('game-results', {}); // Add your results logic here
+        }
+      }, 1000);
+    }
+  });
+
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
+    // Clean up rooms if needed
   });
 });
 

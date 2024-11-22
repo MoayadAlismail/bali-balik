@@ -13,7 +13,7 @@ const allowedOrigins = [
 
 // Express CORS
 app.use(cors({
-  origin: "*",
+  origin: allowedOrigins,
   methods: ['GET', 'POST', 'OPTIONS'],
   credentials: true,
   optionsSuccessStatus: 200
@@ -24,7 +24,7 @@ const httpServer = createServer(app);
 // Socket.IO setup with updated configuration
 const io = new Server(httpServer, {
   cors: {
-    origin: "*",
+    origin: allowedOrigins,
     methods: ["GET", "POST", "OPTIONS"],
     credentials: true,
     allowedHeaders: ["*"]

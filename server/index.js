@@ -13,7 +13,7 @@ const allowedOrigins = [
 
 // Express CORS
 app.use(cors({
-  origin: allowedOrigins,
+  origin: "*",
   methods: ['GET', 'POST', 'OPTIONS'],
   credentials: true,
   optionsSuccessStatus: 200

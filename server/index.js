@@ -2,31 +2,26 @@ const express = require('express');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
-const crypto = require('crypto');
 
 const app = express();
 const httpServer = createServer(app);
 
 const allowedOrigins = [
-  'https://bali-balik.vercel.app',
   'https://www.balibalik.com',
-  'http://localhost:3000',
+  'https://balibalik.com',
+  'http://www.balibalik.com',
+  'http://balibalik.com',
+  'http://localhost:3000'
 ];
 
 app.use(cors({
-  origin: function(origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) === -1) {
-      return callback(new Error('CORS policy violation'), false);
-    }
-    return callback(null, true);
-  },
+  origin: allowedOrigins,
   methods: ['GET', 'POST', 'OPTIONS'],
   credentials: true,
-  optionsSuccessStatus: 204
+  optionsSuccessStatus: 200
 }));
+
+app.options('*', cors());
 
 const io = new Server(httpServer, {
   cors: {
@@ -35,11 +30,14 @@ const io = new Server(httpServer, {
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization']
   },
+  allowEIO3: true,
+  path: '/socket.io/',
+  transports: ['websocket', 'polling'],
   pingTimeout: 60000,
   pingInterval: 25000,
-  transports: ['websocket', 'polling'],
-  allowEIO3: true,
-  path: '/socket.io/'
+  upgradeTimeout: 30000,
+  allowUpgrades: true,
+  cookie: false
 });
 
 // Game state management
@@ -108,4 +106,8 @@ io.on('connection', (socket) => {
 const PORT = process.env.PORT || 3001;
 httpServer.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+});
+
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
 }); 

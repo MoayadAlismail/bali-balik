@@ -6,20 +6,16 @@ const nextConfig = {
         source: '/:path*',
         headers: [
           { key: 'Access-Control-Allow-Credentials', value: 'true' },
-          { key: 'Access-Control-Allow-Origin', value: 'https://bali-balik-production.up.railway.app' },
-          { key: 'Access-Control-Allow-Methods', value: 'GET,DELETE,PATCH,POST,PUT' },
-          { key: 'Access-Control-Allow-Headers', value: 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version' },
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Access-Control-Allow-Methods', value: 'GET,POST,OPTIONS' },
+          { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization' },
         ],
       },
     ];
   },
-  async rewrites() {
-    return [
-      {
-        source: '/socket.io/:path*',
-        destination: 'https://bali-balik-production.up.railway.app/socket.io/:path*',
-      },
-    ];
+  webpack: (config) => {
+    config.externals = [...config.externals, 'socket.io-client'];
+    return config;
   },
 };
 

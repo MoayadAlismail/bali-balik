@@ -6,21 +6,18 @@ const cors = require('cors');
 const app = express();
 const httpServer = createServer(app);
 
-// Configure CORS for both Express and Socket.IO
 const allowedOrigins = [
   'https://bali-balik.vercel.app',
   'http://localhost:3000',
-  // Add any other domains you need to allow
 ];
 
-// CORS for Express
 app.use(cors({
   origin: allowedOrigins,
   methods: ['GET', 'POST'],
-  credentials: true
+  credentials: true,
+  optionsSuccessStatus: 204
 }));
 
-// Create Socket.IO server with CORS configuration
 const io = new Server(httpServer, {
   cors: {
     origin: allowedOrigins,
@@ -28,15 +25,40 @@ const io = new Server(httpServer, {
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization']
   },
-  allowEIO3: true, // Enable Socket.IO version 3 compatibility
-  transports: ['websocket', 'polling']
+  pingTimeout: 60000,
+  pingInterval: 25000,
+  transports: ['websocket', 'polling'],
+  allowEIO3: true,
+  path: '/socket.io/'
 });
 
-// Your existing Socket.IO logic here
+// Game state management
+const rooms = new Map();
+
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
-  
-  // Your existing socket event handlers...
+
+  socket.on('join-room', ({ pin, playerName, role }) => {
+    socket.join(pin);
+    
+    if (!rooms.has(pin)) {
+      rooms.set(pin, {
+        players: [],
+        host: role === 'host' ? socket.id : null
+      });
+    }
+    
+    const room = rooms.get(pin);
+    if (!room.players.includes(playerName)) {
+      room.players.push(playerName);
+    }
+    
+    io.to(pin).emit('player-joined', room.players);
+  });
+
+  socket.on('disconnect', () => {
+    console.log('User disconnected:', socket.id);
+  });
 });
 
 const PORT = process.env.PORT || 3001;

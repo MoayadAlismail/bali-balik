@@ -22,14 +22,30 @@ export default function GameRoom({ params }) {
   useEffect(() => {
     const newSocket = io('https://bali-balik-production.up.railway.app', {
       withCredentials: true,
-      transports: ['websocket', 'polling'],
-      reconnection: true,
+      transports: ['polling', 'websocket'],
+      path: '/socket.io/',
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      timeout: 20000,
+      autoConnect: true,
+      query: {
+        pin: pin,
+        playerName: playerName,
+        role: role
+      }
     });
-    setSocket(newSocket);
 
-    newSocket.emit('join-room', { pin, playerName, role });
+    newSocket.on('connect_error', (error) => {
+      console.error('Connection error:', error);
+    });
+
+    newSocket.on('connect', () => {
+      console.log('Connected to server');
+      newSocket.emit('join-room', { pin, playerName, role });
+    });
+
+    setSocket(newSocket);
 
     newSocket.on('player-joined', (playersList) => {
       console.log('Player joined:', playersList);
@@ -59,7 +75,11 @@ export default function GameRoom({ params }) {
       setResults(matchResults);
     });
 
-    return () => newSocket.disconnect();
+    return () => {
+      if (newSocket) {
+        newSocket.disconnect();
+      }
+    };
   }, [pin, playerName, role]);
 
   const [submittedGuesses, setSubmittedGuesses] = useState([]);

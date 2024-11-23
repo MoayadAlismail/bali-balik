@@ -15,15 +15,16 @@ const allowedOrigins = [
 
 app.use((req, res, next) => {
   const origin = req.headers.origin;
+  console.log('DEBUG: Origin:', origin);
   if (allowedOrigins.includes(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
   }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
   
   if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+    return res.status(200);
   }
   next();
 });
@@ -31,16 +32,18 @@ app.use((req, res, next) => {
 const io = new Server(httpServer, {
   cors: {
     origin: (origin, callback) => {
+      console.log('DEBUG: Socket.IO Origin:', origin); // Debug log
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
+        console.error('DEBUG: Blocked by CORS:', origin);
         callback(new Error('Not allowed by CORS'));
       }
     },
     methods: ['GET', 'POST'],
     credentials: true
   },
-  transports: ['websocket'],
+  transports: ['polling','websocket'],
   allowEIO3: true,
   pingTimeout: 60000,
   pingInterval: 25000

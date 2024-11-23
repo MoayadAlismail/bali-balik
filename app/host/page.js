@@ -11,7 +11,7 @@ export default function HostGame() {
   const [gamePin, setGamePin] = useState('');
 
   useEffect(() => {
-    const newSocket = io('https://www.balibalik.com', {
+    const newSocket = io('https://bali-balik-production.up.railway.app', {
       withCredentials: true,
       transports: ['polling', 'websocket'],
       path: '/socket.io/',

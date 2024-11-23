@@ -28,20 +28,19 @@ export default function HostGame() {
     }
   };
 
-  const handleJoin = (e) => {
-    console.log("handlejoincalled");
-    e.preventDefault();
-    if (socket) {
-      socket.emit('validate-game', pin, (isValid) => {
-        if (isValid) {
-          router.push(`/game/${pin}?role=player&name=${encodeURIComponent(playerName)}`);
-        }
-      });
-    }
-  };
+  // const handleJoin = (e) => {
+  //   e.preventDefault();
 
-  const startGame = (e) => {
-    handleJoin(e);
+  //   if (socket) {
+  //     socket.emit('validate-game', pin, (isValid) => {
+  //       if (isValid) {
+  //         router.push(`/game/${pin}?role=player&name=${encodeURIComponent(playerName)}`);
+  //       }
+  //     });
+  //   }
+  // };
+
+  const startGame = () => {
     if (gamePin) {
       router.push(`/game/${gamePin}?role=host`);
     }
@@ -57,7 +56,13 @@ export default function HostGame() {
       <form onSubmit={handleJoin} className="w-full max-w-sm">
    
         
-        
+        <input
+          type="text"
+          placeholder="ادخل اسمك"
+          value={playerName}
+          onChange={(e) => setPlayerName(e.target.value)}
+          className="w-full mb-4 p-3 rounded border text-black"
+        />
 
         <button
           type="submit"
@@ -76,15 +81,7 @@ export default function HostGame() {
       </button>
       
       {gamePin && (
-        
         <div className="text-center">
-          <input
-          type="text"
-          placeholder="ادخل اسمك"
-          value={playerName}
-          onChange={(e) => setPlayerName(e.target.value)}
-          className="w-full mb-4 p-3 rounded border text-black"
-        />
           <p className="text-2xl font-mono mb-4">كود الغرفة: {gamePin}</p>
           <button
             onClick={startGame}

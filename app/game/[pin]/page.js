@@ -1,15 +1,15 @@
 'use client';
-import { useEffect, useState, use } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import io from 'socket.io-client';
-import config from '@/config';
 
 export default function GameRoom({ params }) {
   const searchParams = useSearchParams();
   const role = searchParams.get('role');
   const playerName = searchParams.get('name');
-  const pin = use(params).pin;
+  const pin = params.pin;
   
+  // Initialize socket state
   const [socket, setSocket] = useState(null);
   const [gameState, setGameState] = useState('waiting');
   const [currentTopic, setCurrentTopic] = useState('');
@@ -18,65 +18,91 @@ export default function GameRoom({ params }) {
   const [players, setPlayers] = useState([]);
   const [timeLeft, setTimeLeft] = useState(null);
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [submittedGuesses, setSubmittedGuesses] = useState([]);
 
+  // Initialize socket connection when component mounts
   useEffect(() => {
-    const newSocket = io(config.socketUrl);
+    const newSocket = io('http://bali-balik-production.up.railway.app', {
+      withCredentials: true,
+      transports: ['websocket'],
+      autoConnect: true,
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      secure: false,  // Changed to false since we're using HTTP
+      rejectUnauthorized: false,
+      extraHeaders: {
+        'Origin': 'https://www.balibalik.com'
+      }
+    });
+    // Set up event listeners
+    newSocket.on('connect', () => {
+      console.log('Connected to server');
+      // Only emit join-room after successful connection
+      newSocket.emit('join-room', { pin, playerName, role });
+    });
+
+    // Store socket in state
     setSocket(newSocket);
 
-    newSocket.emit('join-room', { pin, playerName, role });
+    // Clean up on unmount
+    return () => {
+      if (newSocket) newSocket.disconnect();
+    };
+  }, []); // Empty dependency array means this runs once on mount
 
-    newSocket.on('player-joined', (playersList) => {
+  // Set up game event listeners after socket is initialized
+  useEffect(() => {
+    if (!socket) return; // Don't do anything if socket isn't initialized
+
+    socket.on('player-joined', (playersList) => {
       console.log('Player joined:', playersList);
       setPlayers(playersList);
     });
 
-    newSocket.on('game-started', ({ topic, timeLeft }) => {
+    socket.on('game-started', ({ topic, timeLeft }) => {
       console.log('Game started with topic:', topic);
       setGameState('playing');
       setCurrentTopic(topic);
       setTimeLeft(timeLeft);
       setHasSubmitted(false);
-      setGuess(''); // Reset guess for new round
+      setGuess('');
     });
 
-    newSocket.on('timer-update', (time) => {
-      console.log('Timer update:', time);
+    socket.on('timer-update', (time) => {
       setTimeLeft(time);
       if (time <= 0) {
         setGameState('results');
       }
     });
 
-    newSocket.on('game-results', (matchResults) => {
-      console.log('Game results:', matchResults);
+    socket.on('game-results', (matchResults) => {
       setGameState('results');
       setResults(matchResults);
     });
 
-    return () => newSocket.disconnect();
-  }, [pin, playerName, role]);
-
-  const [submittedGuesses, setSubmittedGuesses] = useState([]);
+    // Clean up listeners
+    return () => {
+      socket.off('player-joined');
+      socket.off('game-started');
+      socket.off('timer-update');
+      socket.off('game-results');
+    };
+  }, [socket]); // Only re-run if socket changes
 
   const handleSubmitGuess = () => {
-    if (socket && guess.trim()) {
-      // Emit the guess to the server
+    if (!socket) return; // Guard clause for socket
+    if (guess.trim()) {
       socket.emit('submit-guess', { pin, playerName, guess });
-      
-      // Update local state with the new guess
-      setSubmittedGuesses(prevGuesses => [
-        ...prevGuesses,
-        { playerName, guess }
-      ]);
-  
-      // Clear the guess input field after submission
+      setSubmittedGuesses(prev => [...prev, { playerName, guess }]);
       setGuess('');
+      setHasSubmitted(true);
     }
   };
-  
 
   const startGame = () => {
-    if (socket && role === 'host') {
+    if (!socket) return; // Guard clause for socket
+    if (role === 'host') {
       console.log('Emitting start-game event for pin:', pin);
       socket.emit('start-game', pin);
     }

@@ -4,185 +4,116 @@ const { Server } = require('socket.io');
 const cors = require('cors');
 
 const app = express();
+const httpServer = createServer(app);
 
 const allowedOrigins = [
   'https://www.balibalik.com',
   'https://balibalik.com',
-  'http://localhost:3000'
+  'http://localhost:3000',
+  'http://bali-balik-production.up.railway.app'
 ];
 
-// Express CORS
-app.use(cors({
-  origin: allowedOrigins,
-  methods: ['GET', 'POST', 'OPTIONS'],
-  credentials: true,
-  optionsSuccessStatus: 200
-}));
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  next();
+});
 
-const httpServer = createServer(app);
-
-// Socket.IO setup with updated configuration
 const io = new Server(httpServer, {
   cors: {
-    origin: allowedOrigins,
-    methods: ["GET", "POST", "OPTIONS"],
-    credentials: true,
-    allowedHeaders: ["*"]
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    methods: ['GET', 'POST'],
+    credentials: true
   },
-  pingTimeout: 60000,
-  pingInterval: 25000,
-  upgradeTimeout: 30000,
+  transports: ['websocket'],
   allowEIO3: true,
-  transports: ['polling', 'websocket'],
-  maxHttpBufferSize: 1e8,
-  path: '/socket.io/'
+  pingTimeout: 60000,
+  pingInterval: 25000
 });
 
+// Game state management
 const rooms = new Map();
-const topics = [
-  "أشياء تلقاها في المطبخ",
-  "أفلام مشهورة",
-  "رياضات",
-  "حيوانات",
-  "مأكولات",
-  "مدن عالمية",
-  "أدوات مدرسية",
-  "ألوان",
-  "أجهزة إلكترونية",
-  "فواكه وخضروات",
-  "أسماء عربية",
-  "شخصيات تاريخية",
-];
 
-const ROUND_TIME = 10; // 10 seconds per round
-
-const activeGames = new Set();
+function generatePin() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
 
 io.on('connection', (socket) => {
-  console.log('Client connected:', socket.id);
+  console.log('User connected:', socket.id);
 
-socket.on('create-game', (pin) => {
-  console.log('Creating game:', pin);
-  activeGames.add(pin);
-  socket.emit('game-created', pin);
-});
-
-socket.on('validate-game', (pin, callback) => {
-  const isValid = activeGames.has(pin);
-  console.log('Validating game:', pin, isValid);
-  callback(isValid);
-});
-
-socket.on('join-room', ({ pin, playerName, role }) => {
-  console.log('Join room:', { pin, playerName, role });
-  socket.join(pin);
-
-  if (!rooms.has(pin)) {
+  socket.on('create-game', () => {
+    const pin = generatePin();
     rooms.set(pin, {
       players: [],
-      guesses: new Map(),
-      host: role === 'host' ? socket.id : null,
-      timer: null
+      host: socket.id
     });
-  }
+    socket.emit('game-created', pin);
+  });
 
-  const room = rooms.get(pin);
-  if (playerName && !room.players.includes(playerName)) {
-    room.players.push(playerName);
-  }
-  if (role === 'host') {
-    room.host = socket.id;
-  }
-
-  io.to(pin).emit('player-joined', room.players);
-});
-
-socket.on('start-game', (pin) => {
-  console.log('Start game request received for pin:', pin);
-  const room = rooms.get(pin);
-
-  if (room && socket.id === room.host) {
-    console.log('Starting game for pin:', pin);
-    const randomTopic = topics[Math.floor(Math.random() * topics.length)];
-    room.guesses.clear();
-    room.currentTopic = randomTopic;
-
-    // Clear any existing timer
-    if (room.timer) {
-      clearInterval(room.timer);
+  socket.on('join-room', ({ pin, playerName, role }) => {
+    socket.join(pin);
+    
+    if (!rooms.has(pin)) {
+      rooms.set(pin, {
+        players: [],
+        host: role === 'host' ? socket.id : null
+      });
     }
-
-    // Start the timer
-    let timeLeft = ROUND_TIME;
-    io.to(pin).emit('game-started', { topic: randomTopic, timeLeft });
-
-    room.timer = setInterval(() => {
-      timeLeft--;
-      io.to(pin).emit('timer-update', timeLeft);
-
-      if (timeLeft <= 0) {
-        clearInterval(room.timer);
-        const matches = calculateMatches(room.guesses);
-        io.to(pin).emit('game-results', matches);
-      }
-    }, 1000);
-  } else {
-    console.log('Invalid start game request:', { pin, socketId: socket.id, host: room?.host });
-  }
-});
-
-socket.on('submit-guess', ({ pin, playerName, guess }) => {
-  console.log('Guess submitted:', { pin, playerName, guess });
-  const room = rooms.get(pin);
-  if (room) {
-    room.guesses.set(playerName, guess.toLowerCase().trim());
-
-    // If all players have submitted their guesses, end the round early
-    if (room.guesses.size === room.players.length) {
-      clearInterval(room.timer);
-      const matches = calculateMatches(room.guesses);
-      io.to(pin).emit('game-results', matches);
+    
+    const room = rooms.get(pin);
+    if (!room.players.includes(playerName)) {
+      room.players.push(playerName);
     }
-  }
-});
+    
+    io.to(pin).emit('player-joined', room.players);
+  });
 
-socket.on('disconnect', () => {
-  console.log('Client disconnected:', socket.id);
-  // Clean up rooms where this socket was the host
-  for (const [pin, room] of rooms.entries()) {
-    if (room.host === socket.id) {
-      if (room.timer) {
-        clearInterval(room.timer);
-      }
-      rooms.delete(pin);
-      activeGames.delete(pin);
-    }
-  }
-});
-});
-
-function calculateMatches(guesses) {
-  const guessesList = Array.from(guesses.values());
-  const matches = {};
-
-  guessesList.forEach((guess) => {
-    const count = guessesList.filter(g => g === guess).length;
-    if (count > 1) {
-      matches[guess] = count;
+  socket.on('start-game', (pin) => {
+    const room = rooms.get(pin);
+    if (room && room.host === socket.id) {
+      const topic = 'test topic'; // You can modify this to generate random topics
+      io.to(pin).emit('game-started', { topic, timeLeft: 60 });
+      
+      // Start the timer
+      let timeLeft = 60;
+      const timer = setInterval(() => {
+        timeLeft--;
+        io.to(pin).emit('timer-update', timeLeft);
+        
+        if (timeLeft <= 0) {
+          clearInterval(timer);
+          io.to(pin).emit('game-results', {}); // Add your results logic here
+        }
+      }, 1000);
     }
   });
 
-  return matches;
-}
-
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).send('OK');
+  socket.on('disconnect', () => {
+    console.log('User disconnected:', socket.id);
+    // Clean up rooms if needed
+  });
 });
 
-// Rest of your server code...
-
 const PORT = process.env.PORT || 3001;
-httpServer.listen(PORT, '0.0.0.0', () => {
+httpServer.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+});
+
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
 }); 

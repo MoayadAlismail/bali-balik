@@ -1,96 +1,104 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import io from 'socket.io-client';
-import config from '@/config';
 
 export default function HostGame() {
-  const [gamePin, setGamePin] = useState('');
-  const [socket, setSocket] = useState(null);
   const router = useRouter();
-  const [pin, setPin] = useState('');
   const [playerName, setPlayerName] = useState('');
-
-
+  const [socket, setSocket] = useState(null);
+  const [gamePin, setGamePin] = useState('');
 
   useEffect(() => {
-    const newSocket = io(config.socketUrl);
+    const newSocket = io('https://bali-balik-production.up.railway.app', {
+      withCredentials: true,
+      transports: ['polling', 'websocket'],
+      path: '/socket.io/',
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      timeout: 20000,
+      autoConnect: true
+    });
+
+    newSocket.on('connect', () => {
+      console.log('Connected to server');
+      // Request a new game PIN from the server
+      newSocket.emit('create-game');
+    });
+
+    newSocket.on('game-created', (pin) => {
+      console.log('Game created with PIN:', pin);
+      setGamePin(pin);
+    });
+
+    newSocket.on('connect_error', (error) => {
+      console.error('Connection error:', error);
+    });
 
     setSocket(newSocket);
-    return () => newSocket.disconnect();
+
+    return () => {
+      if (newSocket) {
+        newSocket.disconnect();
+      }
+    };
   }, []);
 
-  const generatePin = () => {
-    const pin = Math.floor(100000 + Math.random() * 900000).toString();
-    setGamePin(pin);
-    if (socket) {
-      socket.emit('create-game', pin);
+  const handleStartHosting = () => {
+    if (playerName.trim() && gamePin) {
+      router.push(`/game/${gamePin}?role=host&name=${encodeURIComponent(playerName)}`);
     }
   };
-
-  // const handleJoin = (e) => {
-  //   e.preventDefault();
-
-  //   if (socket) {
-  //     socket.emit('validate-game', pin, (isValid) => {
-  //       if (isValid) {
-  //         router.push(`/game/${pin}?role=player&name=${encodeURIComponent(playerName)}`);
-  //       }
-  //     });
-  //   }
-  // };
-
-  const startGame = () => {
-    if (gamePin) {
-      router.push(`/game/${gamePin}?role=host`);
-    }
-  };
-
-  // setPin({gamePin});
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-8">
-      <h1 className="text-3xl font-bold mb-8">إنشاء غرفة لعب</h1>
-      
-      {/* We gotta remove the submit from this form, make the name submit when ابدا اللعبة is pressed instead.
-      <form onSubmit={handleJoin} className="w-full max-w-sm">
-   
-        
-        <input
-          type="text"
-          placeholder="ادخل اسمك"
-          value={playerName}
-          onChange={(e) => setPlayerName(e.target.value)}
-          className="w-full mb-4 p-3 rounded border text-black"
-        />
-
-        <button
-          type="submit"
-          className="w-full rounded-full bg-foreground text-background px-6 py-3"
-        >
-        </button>
-      </form> */}
-      
-
-
-      <button
-        onClick={generatePin}
-        className="mb-4 rounded-full bg-foreground text-background px-6 py-3"
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#FF9A8B] to-[#FF6B6B] p-4">
+      <motion.div
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        className="bg-white/90 backdrop-blur-md p-8 rounded-2xl shadow-2xl w-full max-w-md"
       >
-        إنشاء كود للعب
-      </button>
-      
-      {gamePin && (
-        <div className="text-center">
-          <p className="text-2xl font-mono mb-4">كود الغرفة: {gamePin}</p>
-          <button
-            onClick={startGame}
-            className="rounded-full border border-black/[.08] px-6 py-3"
+        <motion.h1 
+          className="text-4xl font-bold text-[#FF6B6B] mb-8 text-center"
+          initial={{ scale: 0.9 }}
+          animate={{ scale: 1 }}
+          transition={{ type: "spring", stiffness: 300 }}
+        >
+          إنشاء لعبة جديدة
+        </motion.h1>
+
+        <motion.div className="space-y-6">
+          <div>
+            <input
+              type="text"
+              placeholder="ادخل اسمك"
+              value={playerName}
+              onChange={(e) => setPlayerName(e.target.value)}
+              className="w-full p-4 text-2xl text-center border-3 border-[#FF9A8B] rounded-xl focus:border-[#FF6B6B] outline-none bg-white/50 backdrop-blur-sm transition-all mb-4"
+            />
+          </div>
+
+          {gamePin && (
+            <div className="text-center mb-4">
+              <p className="text-lg text-gray-600 mb-2">رمز اللعبة:</p>
+              <p className="text-4xl font-bold text-[#FF6B6B]">{gamePin}</p>
+            </div>
+          )}
+
+          <motion.button
+            whileHover={{ scale: 1.05, backgroundColor: '#FF6B6B' }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleStartHosting}
+            disabled={!playerName.trim() || !gamePin}
+            className={`w-full p-4 bg-[#FF9A8B] text-white rounded-xl text-xl font-bold shadow-lg hover:shadow-xl transition-all duration-300 ${
+              (!playerName.trim() || !gamePin) ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
           >
-            ابدأ الغرفة
-          </button>
-        </div>
-      )}
+            ابدأ اللعبة 🎮
+          </motion.button>
+        </motion.div>
+      </motion.div>
     </div>
   );
 } 

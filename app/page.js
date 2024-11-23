@@ -1,6 +1,7 @@
 'use client'
 import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 
 export default function Home() {
   const router = useRouter()
@@ -23,6 +24,14 @@ export default function Home() {
     }
   }
 
+  const handleHostClick = () => {
+    router.push('/host')
+  }
+
+  const handleJoinClick = () => {
+    router.push('/join')
+  }
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-[#FF9A8B] to-[#FF6B6B]">
       <motion.div
@@ -35,7 +44,7 @@ export default function Home() {
           variants={itemVariants}
           className="text-6xl font-bold text-white mb-12 drop-shadow-lg"
         >
-          يلا نلعب! 🎮
+          تفكر باللي أفكر فيه؟! 🧠
         </motion.h1>
         
         <motion.div 
@@ -46,7 +55,7 @@ export default function Home() {
             whileHover={{ scale: 1.05, backgroundColor: '#4A90E2' }}
             whileTap={{ scale: 0.95 }}
             className="w-72 p-5 bg-[#5C9CE5] text-white rounded-xl text-xl font-bold shadow-lg hover:shadow-xl transition-all duration-300"
-            onClick={() => router.push('/host')}
+            onClick={handleHostClick}
           >
             إنشاء لعبة جديدة 🎲
           </motion.button>
@@ -55,9 +64,9 @@ export default function Home() {
             whileHover={{ scale: 1.05, backgroundColor: '#45B26B' }}
             whileTap={{ scale: 0.95 }}
             className="w-72 p-5 bg-[#4CAF50] text-white rounded-xl text-xl font-bold shadow-lg hover:shadow-xl transition-all duration-300"
-            onClick={() => router.push('/join')}
+            onClick={handleJoinClick}
           >
-            انضم للعبة 🎯
+            انضم للعبة 🎮
           </motion.button>
         </motion.div>
       </motion.div>

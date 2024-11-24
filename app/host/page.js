@@ -11,15 +11,18 @@ export default function HostGame() {
   const [gamePin, setGamePin] = useState('');
 
   useEffect(() => {
-    const newSocket = io('https://bali-balik-production.up.railway.app', {
+    const newSocket = io('https://bali-balik.onrender.com', {
       withCredentials: true,
-      transports: ['polling', 'websocket'],
-      path: '/socket.io/',
+      transports: ['websocket'],
+      autoConnect: true,
+      reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-      timeout: 20000,
-      autoConnect: true
+      secure: true,
+      rejectUnauthorized: false,
+      extraHeaders: {
+        'Origin': 'https://www.balibalik.com'
+      }
     });
 
     newSocket.on('connect', () => {

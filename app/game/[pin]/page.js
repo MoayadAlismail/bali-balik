@@ -22,14 +22,14 @@ export default function GameRoom({ params }) {
 
   // Initialize socket connection when component mounts
   useEffect(() => {
-    const newSocket = io('http://bali-balik-production.up.railway.app', {
+    const newSocket = io('https://bali-balik.onrender.com', {
       withCredentials: true,
       transports: ['websocket'],
       autoConnect: true,
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
-      secure: false,  // Changed to false since we're using HTTP
+      secure: true,  // Changed to true since Render provides HTTPS
       rejectUnauthorized: false,
       extraHeaders: {
         'Origin': 'https://www.balibalik.com'

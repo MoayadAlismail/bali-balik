@@ -11,11 +11,19 @@ export default function JoinGame() {
   const router = useRouter();
 
   useEffect(() => {
-    // Initialize socket connection
-    const newSocket = io('https://bali-balik-production.up.railway.app', {
+    // Initialize socket connection with new Render URL
+    const newSocket = io('https://bali-balik.onrender.com', {
       withCredentials: true,
-      transports: ['polling', 'websocket'],
-      path: '/socket.io/',
+      transports: ['websocket'],
+      autoConnect: true,
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      secure: true,
+      rejectUnauthorized: false,
+      extraHeaders: {
+        'Origin': 'https://www.balibalik.com'
+      }
     });
 
     newSocket.on('connect', () => {

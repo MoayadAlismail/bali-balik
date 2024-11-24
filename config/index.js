@@ -1,7 +1,7 @@
 const config = {
   serverUrl: process.env.NODE_ENV === 'production' 
-    ? 'wss://bali-balik-production.up.railway.app'
-    : 'ws://localhost:3001',
+    ? 'https://bali-balik.onrender.com'
+    : 'http://localhost:3001',
   wsPath: '/socket.io/'
 };
 

@@ -101,10 +101,29 @@ export default function GameRoom({ params }) {
   };
 
   const startGame = () => {
-    if (!socket) return; // Guard clause for socket
+    console.log('=== Start Game Function Called ===');
+    console.log('Socket state:', socket ? 'exists' : 'null');
+    console.log('Role:', role);
+    console.log('PIN:', pin);
+    
+    if (!socket) {
+      console.error('❌ Cannot start game: Socket not initialized');
+      return;
+    }
+    
     if (role === 'host') {
+      console.log('✅ Conditions met for starting game:');
+      console.log('- Is host');
+      console.log('- Socket connected:', socket.connected);
+      console.log('- Socket ID:', socket.id);
       console.log('Emitting start-game event for pin:', pin);
-      socket.emit('start-game', pin);
+      
+      socket.emit('start-game', pin, (response) => {
+        // Add callback to verify emission
+        console.log('Start game event acknowledgement:', response);
+      });
+    } else {
+      console.log('❌ Cannot start game: Not a host (role is', role, ')');
     }
   };
 

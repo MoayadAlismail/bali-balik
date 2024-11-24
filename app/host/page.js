@@ -93,9 +93,9 @@ export default function HostGame() {
             whileHover={{ scale: 1.05, backgroundColor: '#FF6B6B' }}
             whileTap={{ scale: 0.95 }}
             onClick={handleStartHosting}
-            disabled={!playerName.trim() || !gamePin}
+            disabled={!playerName.trim()}
             className={`w-full p-4 bg-[#FF9A8B] text-white rounded-xl text-xl font-bold shadow-lg hover:shadow-xl transition-all duration-300 ${
-              (!playerName.trim() || !gamePin) ? 'opacity-50 cursor-not-allowed' : ''
+              (!playerName.trim()) ? 'opacity-50 cursor-not-allowed' : ''
             }`}
           >
             ابدأ اللعبة 🎮

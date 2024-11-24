@@ -6,19 +6,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "server": "node server/index.js"
+    "lint": "next lint"
   },
   "dependencies": {
     "@next/font": "^13.4.19",
     "@vercel/analytics": "^1.4.1",
-    "cors": "^2.8.5",
-    "express": "^4.18.2",
     "framer-motion": "^10.18.0",
     "next": "^15.0.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "socket.io": "^4.7.2",
     "socket.io-client": "^4.8.1"
   },
   "devDependencies": {

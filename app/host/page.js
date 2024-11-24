@@ -50,6 +50,7 @@ export default function HostGame() {
   }, []);
 
   const handleStartHosting = () => {
+    console.log("HandleStartHosting Called");
     if (playerName.trim() && gamePin) {
       router.push(`/game/${gamePin}?role=host&name=${encodeURIComponent(playerName)}`);
     }
@@ -98,7 +99,7 @@ export default function HostGame() {
               (!playerName.trim()) ? 'opacity-50 cursor-not-allowed' : ''
             }`}
           >
-           TEST ابدأ اللعبة 🎮
+          ابدأ اللعبة 🎮
           </motion.button>
         </motion.div>
       </motion.div>

@@ -118,10 +118,24 @@ export default function GameRoom({ params }) {
       console.log('- Socket ID:', socket.id);
       console.log('Emitting start-game event for pin:', pin);
       
-      socket.emit('start-game', pin, (response) => {
-        // Add callback to verify emission
-        console.log('Start game event acknowledgement:', response);
-      });
+      // Add error handling and timeout for the emit
+      try {
+        const timeout = setTimeout(() => {
+          console.error('❌ Start game event timed out after 5 seconds');
+        }, 5000);
+
+        socket.emit('start-game', pin, (response) => {
+          clearTimeout(timeout);
+          console.log('Start game event acknowledgement:', response);
+        });
+
+        // Add an error event listener
+        socket.once('error', (error) => {
+          console.error('❌ Socket error during start-game:', error);
+        });
+      } catch (error) {
+        console.error('❌ Error emitting start-game event:', error);
+      }
     } else {
       console.log('❌ Cannot start game: Not a host (role is', role, ')');
     }

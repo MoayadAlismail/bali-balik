@@ -22,7 +22,7 @@ export default function GameRoom({ params }) {
 
   // Initialize socket connection when component mounts
   useEffect(() => {
-    const newSocket = io('https://bali-balik.onrender.com', {
+    const newSocket = io('https://bali-balik.fly.dev', {
       withCredentials: true,
       transports: ['websocket'],
       autoConnect: true,
@@ -32,7 +32,8 @@ export default function GameRoom({ params }) {
       secure: true,  // Changed to true since Render provides HTTPS
       rejectUnauthorized: false,
       extraHeaders: {
-        'Origin': 'https://www.balibalik.com'
+        'Origin': 'https://www.balibalik.com',
+        'Origin': 'https://bali-balik.fly.dev'
       }
     });
     // Set up event listeners

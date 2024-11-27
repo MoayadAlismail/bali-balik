@@ -22,7 +22,7 @@ export default function GameRoom({ params }) {
 
   // Initialize socket connection when component mounts
   useEffect(() => {
-    const newSocket = io(process.env.NEXT_PUBLIC_SOCKET_URL, {
+    const newSocket = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'https://balibalik.koyeb.app', {
       withCredentials: true,
       transports: ['websocket'],
       autoConnect: true,
@@ -32,7 +32,7 @@ export default function GameRoom({ params }) {
       secure: true,
       rejectUnauthorized: false,
       extraHeaders: {
-        'Origin': process.env.NEXT_PUBLIC_APP_URL || 'https://www.balibalik.com'
+        'Origin': process.env.NEXT_PUBLIC_APP_URL || 'https://balibalik.koyeb.app'
       }
     });
     // Set up event listeners

@@ -52,6 +52,7 @@ export default function HostGame() {
   const handleStartHosting = () => {
     console.log("HandleStartHosting Called");
     if (playerName.trim() && gamePin) {
+      console.log("playername and gamepin provided...");
       router.push(`/game/${gamePin}?role=host&name=${encodeURIComponent(playerName)}`);
     }
   };

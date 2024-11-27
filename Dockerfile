@@ -21,11 +21,12 @@ RUN cp -r .next/standalone/* ./
 RUN cp -r .next/static .next/standalone/.next/
 RUN cp -r public .next/standalone/
 
-# Expose the port your app runs on
-EXPOSE 3000
+# Expose both ports (for Next.js and health check)
+EXPOSE 3000 8000
 
-# Set the environment variable for the port
+# Set the environment variables
 ENV PORT=3000
+ENV HEALTH_CHECK_PORT=8000
 
-# Start the application
-CMD ["node", "server.js"] 
+# Start the application with health check
+CMD ["sh", "-c", "node server.js & nc -l -p 8000"] 

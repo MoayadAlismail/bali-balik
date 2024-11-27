@@ -9,6 +9,18 @@ const dev = process.env.NODE_ENV !== 'production';
 const app = next({ dev });
 const handle = app.getRequestHandler();
 const PORT = process.env.PORT || 3000;
+const HEALTH_CHECK_PORT = process.env.HEALTH_CHECK_PORT || 8000;
+
+// Create health check server
+const healthApp = express();
+healthApp.get('/', (req, res) => {
+  res.status(200).send('OK');
+});
+healthApp.listen(HEALTH_CHECK_PORT, () => {
+  console.log(`Health check server listening on port ${HEALTH_CHECK_PORT}`);
+});
+
+// Rest of your server code...
 const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS 
   ? process.env.CORS_ALLOWED_ORIGINS.split(',')
   : [

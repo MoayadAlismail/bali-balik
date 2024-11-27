@@ -9,18 +9,10 @@ const dev = process.env.NODE_ENV !== 'production';
 const app = next({ dev });
 const handle = app.getRequestHandler();
 const PORT = process.env.PORT || 3000;
-const HEALTH_CHECK_PORT = process.env.HEALTH_CHECK_PORT || 8000;
 
-// Create health check server
-const healthApp = express();
-healthApp.get('/', (req, res) => {
-  res.status(200).send('OK');
-});
-healthApp.listen(HEALTH_CHECK_PORT, () => {
-  console.log(`Health check server listening on port ${HEALTH_CHECK_PORT}`);
-});
+// Initialize Express and Middleware
+const server = express();
 
-// Rest of your server code...
 const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS 
   ? process.env.CORS_ALLOWED_ORIGINS.split(',')
   : [
@@ -30,54 +22,27 @@ const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS
       'https://balibalik.koyeb.app'
     ];
 
-// Initialize Express and Middleware
-const server = express();
 server.use(cors({
   origin: allowedOrigins,
   methods: ['GET', 'POST', 'OPTIONS'],
   credentials: true,
 }));
 
-// Logging Utility
-const log = (message, data = '') => {
-  const timestamp = new Date().toISOString();
-  const logMessage = `[${timestamp}] ${message} ${typeof data === 'object' ? JSON.stringify(data) : data}`;
-  console.log(logMessage);
-  process.stdout.write(logMessage + '\n'); // Ensures logs show in platforms like Koyeb
-};
-
 // Global Variables
 const rooms = new Map();
 const topics = ['حيوانات', 'طعام', 'رياضة', 'مدن', 'مهن', 'ألوان', 'أفلام', 'مشاهير'];
 
-// Health and Debug Endpoints
+// Health check endpoint - Must be before Next.js handler
 server.get('/health', (req, res) => {
-  log('Health check endpoint called');
-  res.status(200).json({ status: 'ok', rooms: Array.from(rooms.keys()) });
+  res.status(200).send('OK');
 });
 
-server.get('/debug', (req, res) => {
-  log('Debug endpoint called');
-  const debugInfo = {
-    connections: io?.sockets?.sockets?.size || 0,
-    rooms: Array.from(rooms.entries()).map(([pin, room]) => ({
-      pin,
-      players: room.players,
-      state: room.state,
-      host: room.host,
-    })),
-    allowedOrigins,
-  };
-  res.status(200).json(debugInfo);
-});
-
-// Integrate Next.js
+// Prepare Next.js
 app.prepare().then(() => {
-  server.all('*', (req, res) => {
-    return handle(req, res);
-  });
-
+  // Create HTTP server
   const httpServer = http.createServer(server);
+  
+  // Initialize Socket.IO
   const io = new Server(httpServer, {
     cors: {
       origin: allowedOrigins,
@@ -85,39 +50,31 @@ app.prepare().then(() => {
       credentials: true,
     },
     transports: ['websocket'],
-    pingTimeout: 60000,
-    pingInterval: 25000,
   });
 
-  // Socket.IO Handlers
+  // Socket.IO event handlers
   io.on('connection', (socket) => {
-    log(`Socket connected: ${socket.id}`);
-
-    socket.onAny((eventName, ...args) => {
-      log(`Received event "${eventName}"`, JSON.stringify(args));
-    });
+    console.log('Socket connected:', socket.id);
 
     socket.on('create-game', () => createGame(socket));
     socket.on('join-room', (data) => joinRoom(socket, data));
     socket.on('start-game', (pin) => startGame(socket, pin));
-
+    socket.on('submit-guess', (data) => handleGuess(socket, data));
     socket.on('disconnect', () => handleDisconnect(socket));
+  });
+
+  // Handle all other routes with Next.js
+  server.all('*', (req, res) => {
+    return handle(req, res);
   });
 
   // Start the server
   httpServer.listen(PORT, () => {
-    log('==================================');
-    log(`Server running on port ${PORT}`);
-    log(`Allowed Origins: ${allowedOrigins.join(', ')}`);
-    log('==================================');
+    console.log(`> Server listening on port ${PORT}`);
   });
-
-  // Error Handlers
-  process.on('uncaughtException', (err) => log(`Uncaught Exception: ${err.message}`, err.stack));
-  process.on('unhandledRejection', (reason, promise) => log('Unhandled Rejection', { promise, reason }));
 });
 
-// Helper Functions
+// Game logic functions
 function createGame(socket) {
   const pin = Math.floor(100000 + Math.random() * 900000).toString();
   socket.join(pin);
@@ -128,7 +85,6 @@ function createGame(socket) {
     state: 'waiting',
     topic: null,
     guesses: new Map(),
-    hostName: null,
   });
   socket.emit('game-created', pin);
 }
@@ -142,7 +98,6 @@ function joinRoom(socket, { pin, playerName, role }) {
   socket.join(pin);
   if (role === 'host') {
     room.host = socket.id;
-    room.hostName = playerName;
   }
   if (!room.players.includes(playerName)) {
     room.players.push(playerName);
@@ -151,71 +106,60 @@ function joinRoom(socket, { pin, playerName, role }) {
   socket.data.playerName = playerName;
   socket.data.currentRoom = pin;
 
-  io.to(pin).emit('player-joined', {
-    players: room.players,
-    hostName: room.hostName,
-  });
+  io.to(pin).emit('player-joined', room.players);
 }
 
 function startGame(socket, pin) {
   const room = rooms.get(pin);
-  if (!room || room.state !== 'waiting' || room.host !== socket.id || room.players.length < 2) {
-    return socket.emit('error', { message: 'Invalid game start request' });
-  }
+  if (!room || room.host !== socket.id) return;
 
   const topic = topics[Math.floor(Math.random() * topics.length)];
   room.topic = topic;
   room.state = 'playing';
-  room.guesses.clear();
+  room.guesses = new Map();
 
+  io.to(pin).emit('game-started', { topic, timeLeft: 60 });
+
+  // Start countdown
   let timeLeft = 60;
   const timer = setInterval(() => {
     timeLeft--;
+    io.to(pin).emit('timer-update', timeLeft);
     if (timeLeft <= 0) {
       clearInterval(timer);
       endGame(pin);
-    } else {
-      io.to(pin).emit('timer-update', timeLeft);
     }
   }, 1000);
+}
 
-  room.timer = timer;
-  io.to(pin).emit('game-started', { topic, timeLeft, players: room.players });
+function handleDisconnect(socket) {
+  for (const [pin, room] of rooms.entries()) {
+    if (room.players.includes(socket.data?.playerName)) {
+      room.players = room.players.filter(name => name !== socket.data.playerName);
+      io.to(pin).emit('player-left', room.players);
+    }
+    if (room.host === socket.id) {
+      io.to(pin).emit('game-ended', { reason: 'host-disconnected' });
+      rooms.delete(pin);
+    }
+  }
+}
+
+function handleGuess(socket, { pin, playerName, guess }) {
+  const room = rooms.get(pin);
+  if (room && room.state === 'playing') {
+    room.guesses.set(playerName, guess);
+    io.to(pin).emit('guess-submitted', { playerName });
+  }
 }
 
 function endGame(pin) {
   const room = rooms.get(pin);
   if (!room) return;
 
-  if (room.timer) {
-    clearInterval(room.timer);
-    room.timer = null;
-  }
-
   room.state = 'results';
   const results = calculateResults(room.guesses);
-
-  io.to(pin).emit('game-results', {
-    results,
-    topic: room.topic,
-    players: room.players,
-  });
-}
-
-function handleDisconnect(socket) {
-  for (const [pin, room] of rooms.entries()) {
-    if (room.host === socket.id) {
-      if (room.timer) clearInterval(room.timer);
-      io.to(pin).emit('game-ended', { reason: 'host-disconnected' });
-      rooms.delete(pin);
-    } else if (room.players.includes(socket.data?.playerName)) {
-      room.players = room.players.filter((name) => name !== socket.data.playerName);
-      io.to(pin).emit('player-left', {
-        players: room.players,
-        playerName: socket.data.playerName,
-      });
-    }
-  }
+  io.to(pin).emit('game-results', results);
 }
 
 function calculateResults(guesses) {

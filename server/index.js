@@ -10,7 +10,7 @@ const allowedOrigins = [
   'https://www.balibalik.com',
   'https://balibalik.com',
   'http://localhost:3000',
-  'http://bali-balik-production.up.railway.app'
+  'https://bali-balik.fly.dev'
 ];
 
 app.use((req, res, next) => {

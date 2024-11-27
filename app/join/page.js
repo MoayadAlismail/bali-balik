@@ -12,7 +12,7 @@ export default function JoinGame() {
 
   useEffect(() => {
     // Initialize socket connection
-    const newSocket = io('https://bali-balik-production.up.railway.app', {
+    const newSocket = io('https://bali-balik.fly.dev', {
       withCredentials: true,
       transports: ['polling', 'websocket'],
       path: '/socket.io/',

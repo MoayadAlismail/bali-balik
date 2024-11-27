@@ -19,7 +19,8 @@ const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS
       'https://www.balibalik.com', 
       'https://balibalik.com', 
       'http://localhost:3000',
-      'https://balibalik.koyeb.app'
+      'https://balibalik.koyeb.app',
+      'https://bali-balik-jdlravf35-moayadalismails-projects.vercel.app'
     ];
 
 server.use(cors({
@@ -46,13 +47,15 @@ app.prepare().then(() => {
   const io = new Server(httpServer, {
     cors: {
       origin: allowedOrigins,
-      methods: ['GET', 'POST'],
+      methods: ['GET', 'POST', 'OPTIONS'],
       credentials: true,
+      allowedHeaders: ['Content-Type', 'Authorization']
     },
     transports: ['websocket'],
     path: '/socket.io/',
     pingTimeout: 60000,
-    pingInterval: 25000
+    pingInterval: 25000,
+    allowEIO3: true
   });
 
   // Socket.IO event handlers

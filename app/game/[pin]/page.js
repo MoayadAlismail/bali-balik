@@ -28,7 +28,6 @@ export default function GameRoom({ params }) {
       APP_URL: process.env.NEXT_PUBLIC_APP_URL
     });
     
-    // Fallback URL with warning
     const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://balibalik.koyeb.app';
     console.log('Attempting to connect to:', socketUrl);
     
@@ -40,7 +39,20 @@ export default function GameRoom({ params }) {
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
       secure: true,
-      rejectUnauthorized: false
+      rejectUnauthorized: false,
+      path: '/socket.io/',
+      extraHeaders: {
+        'Origin': process.env.NEXT_PUBLIC_APP_URL
+      }
+    });
+
+    newSocket.on('connect_error', (error) => {
+      console.error('Socket connection error details:', {
+        message: error.message,
+        description: error.description,
+        context: error.context,
+        type: error.type
+      });
     });
 
     // Set up event listeners
@@ -48,10 +60,6 @@ export default function GameRoom({ params }) {
       console.log('Connected to server');
       // Only emit join-room after successful connection
       newSocket.emit('join-room', { pin, playerName, role });
-    });
-
-    newSocket.on('connect_error', (error) => {
-      console.error('Socket connection error:', error);
     });
 
     newSocket.on('error', (error) => {

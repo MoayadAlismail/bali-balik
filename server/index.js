@@ -11,7 +11,7 @@ const handle = app.getRequestHandler();
 const PORT = process.env.PORT || 3001;
 const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS 
   ? process.env.CORS_ALLOWED_ORIGINS.split(',')
-  : ['https://www.balibalik.com', 'https://balibalik.com', 'http://localhost:3000', 'https://bali-balik.fly.dev'];
+  : ['https://www.balibalik.com', 'https://balibalik.com', 'http://localhost:3000'];
 
 // Initialize Express and Middleware
 const server = express();

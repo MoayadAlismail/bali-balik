@@ -13,13 +13,17 @@ export default function HostGame() {
   useEffect(() => {
     const newSocket = io('https://bali-balik.fly.dev', {
       withCredentials: true,
-      transports: ['polling', 'websocket'],
-      path: '/socket.io/',
+      transports: ['websocket'],
+      autoConnect: true,
+      reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-      timeout: 20000,
-      autoConnect: true
+      secure: true,
+      rejectUnauthorized: false,
+      extraHeaders: {
+        'Origin': 'https://www.balibalik.com',
+        'Origin': 'https://bali-balik.fly.dev'
+      }
     });
 
     newSocket.on('connect', () => {
@@ -47,7 +51,9 @@ export default function HostGame() {
   }, []);
 
   const handleStartHosting = () => {
+    console.log("HandleStartHosting Called");
     if (playerName.trim() && gamePin) {
+      console.log("playername and gamepin provided...");
       router.push(`/game/${gamePin}?role=host&name=${encodeURIComponent(playerName)}`);
     }
   };
@@ -92,10 +98,10 @@ export default function HostGame() {
             onClick={handleStartHosting}
             disabled={!playerName.trim()}
             className={`w-full p-4 bg-[#FF9A8B] text-white rounded-xl text-xl font-bold shadow-lg hover:shadow-xl transition-all duration-300 ${
-              (!playerName.trim() || !gamePin) ? 'opacity-50 cursor-not-allowed' : ''
+              (!playerName.trim()) ? 'opacity-50 cursor-not-allowed' : ''
             }`}
           >
-            ابدأ اللعبة 🎮
+          ابدأ اللعبة 🎮
           </motion.button>
         </motion.div>
       </motion.div>

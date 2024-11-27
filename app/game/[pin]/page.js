@@ -22,18 +22,17 @@ export default function GameRoom({ params }) {
 
   // Initialize socket connection when component mounts
   useEffect(() => {
-    const newSocket = io('https://bali-balik.fly.dev', {
+    const newSocket = io(process.env.NEXT_PUBLIC_SOCKET_URL, {
       withCredentials: true,
       transports: ['websocket'],
       autoConnect: true,
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
-      secure: false,  // Changed to false since we're using HTTP
+      secure: true,
       rejectUnauthorized: false,
       extraHeaders: {
-        'Origin': 'https://www.balibalik.com',
-        'Origin': 'https://bali-balik.fly.dev'
+        'Origin': process.env.NEXT_PUBLIC_APP_URL || 'https://www.balibalik.com'
       }
     });
     // Set up event listeners
@@ -102,10 +101,43 @@ export default function GameRoom({ params }) {
   };
 
   const startGame = () => {
-    if (!socket) return; // Guard clause for socket
+    console.log('=== Start Game Function Called ===');
+    console.log('Socket state:', socket ? 'exists' : 'null');
+    console.log('Role:', role);
+    console.log('PIN:', pin);
+    
+    if (!socket) {
+      console.error('❌ Cannot start game: Socket not initialized');
+      return;
+    }
+    
     if (role === 'host') {
+      console.log('✅ Conditions met for starting game:');
+      console.log('- Is host');
+      console.log('- Socket connected:', socket.connected);
+      console.log('- Socket ID:', socket.id);
       console.log('Emitting start-game event for pin:', pin);
-      socket.emit('start-game', pin);
+      
+      // Add error handling and timeout for the emit
+      try {
+        const timeout = setTimeout(() => {
+          console.error('❌ Start game event timed out after 5 seconds');
+        }, 5000);
+
+        socket.emit('start-game', pin, (response) => {
+          clearTimeout(timeout);
+          console.log('Start game event acknowledgement:', response);
+        });
+
+        // Add an error event listener
+        socket.once('error', (error) => {
+          console.error('❌ Socket error during start-game:', error);
+        });
+      } catch (error) {
+        console.error('❌ Error emitting start-game event:', error);
+      }
+    } else {
+      console.log('❌ Cannot start game: Not a host (role is', role, ')');
     }
   };
 

@@ -1,18 +1,19 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  async headers() {
-    return [
-      {
-        source: '/:path*',
-        headers: [
-          { key: 'Access-Control-Allow-Origin', value: 'http://bali-balik-production.up.railway.app' },
-          { key: 'Access-Control-Allow-Methods', value: 'GET,POST,OPTIONS' },
-          { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization' },
-          { key: 'Access-Control-Allow-Credentials', value: 'true' }
-        ]
-      }
-    ];
-  }
-};
+    output: 'standalone',
+    async headers() {
+        return [
+            {
+                // Allow CORS for your API routes
+                source: '/api/:path*',
+                headers: [
+                    { key: 'Access-Control-Allow-Origin', value: '*' },
+                    { key: 'Access-Control-Allow-Methods', value: 'GET,POST,PUT,DELETE,OPTIONS' },
+                    { key: 'Access-Control-Allow-Headers', value: 'Content-Type' },
+                ],
+            },
+        ];
+    },
+}
 
-module.exports = nextConfig; 
+module.exports = nextConfig 

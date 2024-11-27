@@ -33,7 +33,7 @@ export default function GameRoom({ params }) {
     
     const newSocket = io(socketUrl, {
       withCredentials: true,
-      transports: ['websocket'],
+      transports: ['websocket', 'polling'],  // Allow fallback to polling
       autoConnect: true,
       reconnection: true,
       reconnectionAttempts: 5,
@@ -47,12 +47,12 @@ export default function GameRoom({ params }) {
     });
 
     newSocket.on('connect_error', (error) => {
-      console.error('Socket connection error details:', {
-        message: error.message,
-        description: error.description,
-        context: error.context,
-        type: error.type
-      });
+      console.error('Socket connection error details:', error);
+      // Try to reconnect with polling if WebSocket fails
+      if (error.type === 'TransportError') {
+        console.log('Attempting to reconnect with polling transport');
+        newSocket.io.opts.transports = ['polling', 'websocket'];
+      }
     });
 
     // Set up event listeners

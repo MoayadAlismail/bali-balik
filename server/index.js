@@ -43,7 +43,7 @@ app.prepare().then(() => {
   // Create HTTP server
   const httpServer = http.createServer(server);
   
-  // Initialize Socket.IO
+  // Initialize Socket.IO with more detailed configuration
   const io = new Server(httpServer, {
     cors: {
       origin: allowedOrigins,
@@ -51,11 +51,34 @@ app.prepare().then(() => {
       credentials: true,
       allowedHeaders: ['Content-Type', 'Authorization']
     },
-    transports: ['websocket'],
+    transports: ['websocket', 'polling'],  // Allow both WebSocket and polling
     path: '/socket.io/',
     pingTimeout: 60000,
     pingInterval: 25000,
-    allowEIO3: true
+    allowEIO3: true,
+    cookie: {
+      name: 'io',
+      path: '/',
+      httpOnly: true,
+      sameSite: 'none',
+      secure: true
+    }
+  });
+
+  // Add upgrade event handler
+  httpServer.on('upgrade', (request, socket, head) => {
+    console.log('Upgrade request received:', request.url);
+    const origin = request.headers.origin;
+    if (allowedOrigins.includes(origin)) {
+      socket.write('HTTP/1.1 101 Web Socket Protocol Handshake\r\n' +
+                  'Upgrade: WebSocket\r\n' +
+                  'Connection: Upgrade\r\n' +
+                  'Sec-WebSocket-Accept: ' + head.toString('base64') + '\r\n' +
+                  '\r\n');
+      socket.pipe(socket);
+    } else {
+      socket.destroy();
+    }
   });
 
   // Socket.IO event handlers

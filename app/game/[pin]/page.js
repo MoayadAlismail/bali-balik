@@ -32,7 +32,7 @@ export default function GameRoom({ params }) {
       secure: true,
       rejectUnauthorized: false,
       extraHeaders: {
-        'Origin': process.env.NEXT_PUBLIC_APP_URL || 'https://www.balibalik.com'
+        'Origin': process.env.NEXT_PUBLIC_APP_URL
       }
     });
     // Set up event listeners

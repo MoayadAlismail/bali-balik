@@ -11,7 +11,13 @@ const handle = app.getRequestHandler();
 const PORT = process.env.PORT || 3001;
 const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS 
   ? process.env.CORS_ALLOWED_ORIGINS.split(',')
-  : ['https://www.balibalik.com', 'https://balibalik.com', 'http://localhost:3000'];
+  : [
+      'https://www.balibalik.com', 
+      'https://balibalik.com', 
+      'http://localhost:3000',
+      'https://balibalik.koyeb.app',
+      'https://fuzzy-sybila-balibalik-545b7f37.koyeb.app'  // Your actual Koyeb frontend URL
+    ];
 
 // Initialize Express and Middleware
 const server = express();

@@ -50,6 +50,9 @@ app.prepare().then(() => {
       credentials: true,
     },
     transports: ['websocket'],
+    path: '/socket.io/',
+    pingTimeout: 60000,
+    pingInterval: 25000
   });
 
   // Socket.IO event handlers

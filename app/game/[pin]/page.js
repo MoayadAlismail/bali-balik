@@ -22,7 +22,14 @@ export default function GameRoom({ params }) {
 
   // Initialize socket connection when component mounts
   useEffect(() => {
-    const newSocket = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'https://balibalik.koyeb.app', {
+    console.log('Connecting to socket URL:', process.env.NEXT_PUBLIC_SOCKET_URL);
+    
+    if (!process.env.NEXT_PUBLIC_SOCKET_URL) {
+      console.error('Socket URL not configured!');
+      return;
+    }
+
+    const newSocket = io(process.env.NEXT_PUBLIC_SOCKET_URL, {
       withCredentials: true,
       transports: ['websocket'],
       autoConnect: true,
@@ -30,11 +37,9 @@ export default function GameRoom({ params }) {
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
       secure: true,
-      rejectUnauthorized: false,
-      extraHeaders: {
-        'Origin': process.env.NEXT_PUBLIC_APP_URL || 'https://balibalik.koyeb.app'
-      }
+      rejectUnauthorized: false
     });
+
     // Set up event listeners
     newSocket.on('connect', () => {
       console.log('Connected to server');
@@ -42,14 +47,25 @@ export default function GameRoom({ params }) {
       newSocket.emit('join-room', { pin, playerName, role });
     });
 
+    newSocket.on('connect_error', (error) => {
+      console.error('Socket connection error:', error);
+    });
+
+    newSocket.on('error', (error) => {
+      console.error('Socket error:', error);
+    });
+
     // Store socket in state
     setSocket(newSocket);
 
     // Clean up on unmount
     return () => {
-      if (newSocket) newSocket.disconnect();
+      if (newSocket) {
+        console.log('Disconnecting socket');
+        newSocket.disconnect();
+      }
     };
-  }, []); // Empty dependency array means this runs once on mount
+  }, [pin, playerName, role]); // Added dependencies
 
   // Set up game event listeners after socket is initialized
   useEffect(() => {

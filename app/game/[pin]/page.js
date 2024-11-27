@@ -22,14 +22,17 @@ export default function GameRoom({ params }) {
 
   // Initialize socket connection when component mounts
   useEffect(() => {
-    console.log('Connecting to socket URL:', process.env.NEXT_PUBLIC_SOCKET_URL);
+    // Debug logging
+    console.log('Environment variables:', {
+      SOCKET_URL: process.env.NEXT_PUBLIC_SOCKET_URL,
+      APP_URL: process.env.NEXT_PUBLIC_APP_URL
+    });
     
-    if (!process.env.NEXT_PUBLIC_SOCKET_URL) {
-      console.error('Socket URL not configured!');
-      return;
-    }
-
-    const newSocket = io(process.env.NEXT_PUBLIC_SOCKET_URL, {
+    // Fallback URL with warning
+    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://balibalik.koyeb.app';
+    console.log('Attempting to connect to:', socketUrl);
+    
+    const newSocket = io(socketUrl, {
       withCredentials: true,
       transports: ['websocket'],
       autoConnect: true,

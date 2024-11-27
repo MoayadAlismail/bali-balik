@@ -4,7 +4,6 @@ const nextConfig = {
     async headers() {
         return [
             {
-                // Allow CORS for your API routes
                 source: '/api/:path*',
                 headers: [
                     { key: 'Access-Control-Allow-Origin', value: '*' },
@@ -14,6 +13,10 @@ const nextConfig = {
             },
         ];
     },
+    env: {
+        NEXT_PUBLIC_SOCKET_URL: process.env.NEXT_PUBLIC_SOCKET_URL,
+        NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL
+    }
 }
 
 module.exports = nextConfig 

@@ -8,15 +8,14 @@ const next = require('next');
 const dev = process.env.NODE_ENV !== 'production';
 const app = next({ dev });
 const handle = app.getRequestHandler();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
 const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS 
   ? process.env.CORS_ALLOWED_ORIGINS.split(',')
   : [
       'https://www.balibalik.com', 
       'https://balibalik.com', 
       'http://localhost:3000',
-      'https://balibalik.koyeb.app',
-      'https://fuzzy-sybila-balibalik-545b7f37.koyeb.app'  // Your actual Koyeb frontend URL
+      'https://balibalik.koyeb.app'
     ];
 
 // Initialize Express and Middleware

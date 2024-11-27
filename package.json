@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "node server/index.js",
+    "start": "node .next/standalone/server.js",
     "dev:server": "nodemon server/index.js"
   },
   "dependencies": {

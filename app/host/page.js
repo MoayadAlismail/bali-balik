@@ -11,7 +11,7 @@ export default function HostGame() {
   const [gamePin, setGamePin] = useState('');
 
   useEffect(() => {
-    const newSocket = io('https://bali-balik.fly.dev', {
+    const newSocket = io('https://bali-balik.koyeb.app', {
       withCredentials: true,
       transports: ['websocket'],
       autoConnect: true,
@@ -22,7 +22,6 @@ export default function HostGame() {
       rejectUnauthorized: false,
       extraHeaders: {
         'Origin': 'https://www.balibalik.com',
-        'Origin': 'https://bali-balik.fly.dev'
       }
     });
 

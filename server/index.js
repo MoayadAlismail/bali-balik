@@ -8,7 +8,7 @@ const next = require('next');
 const dev = process.env.NODE_ENV !== 'production';
 const app = next({ dev });
 const handle = app.getRequestHandler();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
 
 // Initialize Express and Middleware
 const server = express();
@@ -40,66 +40,31 @@ server.get('/health', (req, res) => {
 
 // Prepare Next.js
 app.prepare().then(() => {
-  // Create HTTP server
+  // Create HTTP server first
   const httpServer = http.createServer(server);
   
-  // Initialize Socket.IO with more detailed configuration
+  // Initialize Socket.IO
   const io = new Server(httpServer, {
     cors: {
       origin: allowedOrigins,
       methods: ['GET', 'POST', 'OPTIONS'],
       credentials: true,
-      allowedHeaders: ['Content-Type', 'Authorization']
     },
-    transports: ['websocket', 'polling'],  // Allow both WebSocket and polling
-    path: '/socket.io/',
-    pingTimeout: 60000,
-    pingInterval: 25000,
-    allowEIO3: true,
-    cookie: {
-      name: 'io',
-      path: '/',
-      httpOnly: true,
-      sameSite: 'none',
-      secure: true
-    }
+    transports: ['websocket', 'polling'],
+    path: '/socket.io/'
   });
 
-  // Add upgrade event handler
-  httpServer.on('upgrade', (request, socket, head) => {
-    console.log('Upgrade request received:', request.url);
-    const origin = request.headers.origin;
-    if (allowedOrigins.includes(origin)) {
-      socket.write('HTTP/1.1 101 Web Socket Protocol Handshake\r\n' +
-                  'Upgrade: WebSocket\r\n' +
-                  'Connection: Upgrade\r\n' +
-                  'Sec-WebSocket-Accept: ' + head.toString('base64') + '\r\n' +
-                  '\r\n');
-      socket.pipe(socket);
-    } else {
-      socket.destroy();
-    }
-  });
+  // Socket event handlers here...
 
-  // Socket.IO event handlers
-  io.on('connection', (socket) => {
-    console.log('Socket connected:', socket.id);
-
-    socket.on('create-game', () => createGame(socket));
-    socket.on('join-room', (data) => joinRoom(socket, data));
-    socket.on('start-game', (pin) => startGame(socket, pin));
-    socket.on('submit-guess', (data) => handleGuess(socket, data));
-    socket.on('disconnect', () => handleDisconnect(socket));
-  });
-
-  // Handle all other routes with Next.js
+  // Handle Next.js requests
   server.all('*', (req, res) => {
     return handle(req, res);
   });
 
-  // Start the server
+  // Start server
   httpServer.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(`> Server running on port ${PORT}`);
+    console.log('> Mode:', dev ? 'development' : 'production');
   });
 });
 

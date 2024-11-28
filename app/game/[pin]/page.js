@@ -29,8 +29,8 @@ export default function GameRoom({ params }) {
     });
     
     const isDevelopment = process.env.NODE_ENV === 'development';
-    const socketUrl = isDevelopment ? 'http://localhost:3001' : (process.env.NEXT_PUBLIC_SOCKET_URL || 'https://balibalik.koyeb.app');
-    console.log('Attempting to connect to:', socketUrl);
+    const socketUrl = isDevelopment ? 'http://localhost:3000' : window.location.origin;
+    console.log('Connecting to socket at:', socketUrl);
     
     const newSocket = io(socketUrl, {
       withCredentials: true,

@@ -24,8 +24,9 @@ RUN cp -r public .next/standalone/
 # Expose the port
 EXPOSE 3000
 
-# Set the environment variable
+# Set environment variables
 ENV PORT=3000
+ENV NODE_ENV=production
 
 # Start the application
 CMD ["node", "server.js"] 

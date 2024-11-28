@@ -13,48 +13,56 @@ const PORT = process.env.PORT || 3000;
 // Initialize Express and Middleware
 const server = express();
 
-const allowedOrigins = dev 
+const allowedOrigins = dev
   ? ['http://localhost:3000']
-  : process.env.CORS_ALLOWED_ORIGINS 
+  : process.env.CORS_ALLOWED_ORIGINS
     ? process.env.CORS_ALLOWED_ORIGINS.split(',')
     : [
-        'https://www.balibalik.com', 
+        'https://www.balibalik.com',
         'https://balibalik.com',
         'https://balibalik.koyeb.app'
       ];
 
-server.use(cors({
+const corsOptions = {
   origin: allowedOrigins,
   methods: ['GET', 'POST', 'OPTIONS'],
   credentials: true,
-}));
+};
+
+// Apply CORS middleware to Express
+server.use(cors(corsOptions));
 
 // Global Variables
 const rooms = new Map();
 const topics = ['حيوانات', 'طعام', 'رياضة', 'مدن', 'مهن', 'ألوان', 'أفلام', 'مشاهير'];
 
-// Health check endpoint - Must be before Next.js handler
+// Health check endpoint
 server.get('/health', (req, res) => {
   res.status(200).send('OK');
 });
 
 // Prepare Next.js
 app.prepare().then(() => {
-  // Create HTTP server first
+  // Create HTTP server
   const httpServer = http.createServer(server);
-  
+
   // Initialize Socket.IO
   const io = new Server(httpServer, {
-    cors: {
-      origin: '*',
-      methods: ['GET', 'POST', 'OPTIONS'],
-      credentials: true,
-    },
+    cors: corsOptions,
     transports: ['websocket', 'polling'],
-    path: '/socket.io/'
+    path: '/socket.io/',
   });
 
-  // Socket event handlers here...
+  // Socket.IO event listeners
+  io.on('connection', (socket) => {
+    console.log(`Client connected: ${socket.id}`);
+
+    socket.on('create-game', () => createGame(socket));
+    socket.on('join-room', (data) => joinRoom(socket, data));
+    socket.on('start-game', (pin) => startGame(socket, pin));
+    socket.on('guess', (data) => handleGuess(socket, data));
+    socket.on('disconnect', () => handleDisconnect(socket));
+  });
 
   // Handle Next.js requests
   server.all('*', (req, res) => {
@@ -129,7 +137,7 @@ function startGame(socket, pin) {
 function handleDisconnect(socket) {
   for (const [pin, room] of rooms.entries()) {
     if (room.players.includes(socket.data?.playerName)) {
-      room.players = room.players.filter(name => name !== socket.data.playerName);
+      room.players = room.players.filter((name) => name !== socket.data.playerName);
       io.to(pin).emit('player-left', room.players);
     }
     if (room.host === socket.id) {

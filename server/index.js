@@ -46,7 +46,7 @@ app.prepare().then(() => {
   // Initialize Socket.IO
   const io = new Server(httpServer, {
     cors: {
-      origin: allowedOrigins,
+      origin: '*',
       methods: ['GET', 'POST', 'OPTIONS'],
       credentials: true,
     },

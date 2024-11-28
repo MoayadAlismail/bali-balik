@@ -29,8 +29,11 @@ export default function GameRoom({ params }) {
     });
     
     const isDevelopment = process.env.NODE_ENV === 'development';
-    const socketUrl = isDevelopment ? 'http://localhost:3000' : window.location.origin;
-    console.log('Connecting to socket at:', socketUrl);
+    const socketUrl = isDevelopment 
+      ? 'http://localhost:3000' 
+      : 'https://balibalik.koyeb.app';
+    
+    console.log('Attempting to connect to socket at:', socketUrl);
     
     const newSocket = io(socketUrl, {
       withCredentials: true,
@@ -40,20 +43,16 @@ export default function GameRoom({ params }) {
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
       secure: !isDevelopment,
-      rejectUnauthorized: false,
       path: '/socket.io/',
-      extraHeaders: {
-        'Origin': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'
-      }
     });
 
     newSocket.on('connect_error', (error) => {
-      console.error('Socket connection error details:', error);
-      // Try to reconnect with polling if WebSocket fails
-      if (error.type === 'TransportError') {
-        console.log('Attempting to reconnect with polling transport');
-        newSocket.io.opts.transports = ['polling', 'websocket'];
-      }
+      console.error('Connection error details:', {
+        message: error.message,
+        description: error.description,
+        type: error.type,
+        url: socketUrl
+      });
     });
 
     // Set up event listeners

@@ -4,6 +4,10 @@ const { Server } = require('socket.io');
 const cors = require('cors');
 const next = require('next');
 
+// Global game state
+const rooms = new Map();
+const topics = ['حيوانات', 'طعام', 'رياضة', 'مدن', 'مهن', 'ألوان', 'أفلام', 'مشاهير'];
+
 // Configuration
 const dev = process.env.NODE_ENV !== 'production';
 const app = next({ dev });
@@ -13,49 +17,54 @@ const PORT = process.env.PORT || 3000;
 // Initialize Express and Middleware
 const server = express();
 
-const allowedOrigins = dev
-  ? ['http://localhost:3000']
-  : process.env.CORS_ALLOWED_ORIGINS
-    ? process.env.CORS_ALLOWED_ORIGINS.split(',')
-    : [
-        'https://www.balibalik.com',
-        'https://balibalik.com',
-        'https://balibalik.koyeb.app'
-      ];
-
-const corsOptions = {
-  origin: allowedOrigins,
-  methods: ['GET', 'POST', 'OPTIONS'],
-  credentials: true,
-};
-
-// Apply CORS middleware to Express
-server.use(cors(corsOptions));
-
-// Global Variables
-const rooms = new Map();
-const topics = ['حيوانات', 'طعام', 'رياضة', 'مدن', 'مهن', 'ألوان', 'أفلام', 'مشاهير'];
-
-// Health check endpoint
+// Health check endpoint - Move this before other middleware
 server.get('/health', (req, res) => {
   res.status(200).send('OK');
 });
 
+// CORS configuration
+const corsOptions = {
+  origin: '*',  // Temporarily allow all origins for testing
+  methods: ['GET', 'POST', 'OPTIONS'],
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization'],
+};
+
+server.use(cors(corsOptions));
+
 // Prepare Next.js
 app.prepare().then(() => {
-  // Create HTTP server
   const httpServer = http.createServer(server);
-
-  // Initialize Socket.IO
+  
+  // Socket.IO configuration with explicit timeouts
   const io = new Server(httpServer, {
     cors: corsOptions,
     transports: ['websocket', 'polling'],
     path: '/socket.io/',
+    pingTimeout: 10000,
+    pingInterval: 5000,
+    upgradeTimeout: 30000,
+    allowUpgrades: true,
+    perMessageDeflate: false,  // Disable compression for testing
+    maxHttpBufferSize: 1e8
   });
 
-  // Socket.IO event listeners
+  // Add connection logging
+  io.engine.on('connection_error', (err) => {
+    console.error('Connection error:', err);
+  });
+
   io.on('connection', (socket) => {
-    console.log(`Client connected: ${socket.id}`);
+    console.log('=== New Connection ===');
+    console.log('Socket ID:', socket.id);
+    console.log('Transport:', socket.conn.transport.name);
+    console.log('Headers:', JSON.stringify(socket.handshake.headers, null, 2));
+    console.log('Query:', JSON.stringify(socket.handshake.query, null, 2));
+    console.log('===================');
+
+    socket.on('error', (error) => {
+      console.error('Socket error:', error);
+    });
 
     socket.on('create-game', () => createGame(socket));
     socket.on('join-room', (data) => joinRoom(socket, data));
@@ -69,8 +78,8 @@ app.prepare().then(() => {
     return handle(req, res);
   });
 
-  // Start server
-  httpServer.listen(PORT, () => {
+  // Start server with explicit host
+  httpServer.listen(PORT, '0.0.0.0', () => {
     console.log(`> Server running on port ${PORT}`);
     console.log('> Mode:', dev ? 'development' : 'production');
   });

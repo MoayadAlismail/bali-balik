@@ -28,21 +28,22 @@ export default function GameRoom({ params }) {
       APP_URL: process.env.NEXT_PUBLIC_APP_URL
     });
     
-    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://balibalik.koyeb.app';
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    const socketUrl = isDevelopment ? 'http://localhost:3001' : (process.env.NEXT_PUBLIC_SOCKET_URL || 'https://balibalik.koyeb.app');
     console.log('Attempting to connect to:', socketUrl);
     
     const newSocket = io(socketUrl, {
       withCredentials: true,
-      transports: ['websocket', 'polling'],  // Allow fallback to polling
+      transports: ['websocket', 'polling'],
       autoConnect: true,
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
-      secure: true,
+      secure: !isDevelopment,
       rejectUnauthorized: false,
       path: '/socket.io/',
       extraHeaders: {
-        'Origin': process.env.NEXT_PUBLIC_APP_URL
+        'Origin': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'
       }
     });
 

@@ -8,20 +8,20 @@ const next = require('next');
 const dev = process.env.NODE_ENV !== 'production';
 const app = next({ dev });
 const handle = app.getRequestHandler();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 // Initialize Express and Middleware
 const server = express();
 
-const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS 
-  ? process.env.CORS_ALLOWED_ORIGINS.split(',')
-  : [
-      'https://www.balibalik.com', 
-      'https://balibalik.com', 
-      'http://localhost:3000',
-      'https://balibalik.koyeb.app',
-      'https://bali-balik-jdlravf35-moayadalismails-projects.vercel.app'
-    ];
+const allowedOrigins = dev 
+  ? ['http://localhost:3000']
+  : process.env.CORS_ALLOWED_ORIGINS 
+    ? process.env.CORS_ALLOWED_ORIGINS.split(',')
+    : [
+        'https://www.balibalik.com', 
+        'https://balibalik.com',
+        'https://balibalik.koyeb.app'
+      ];
 
 server.use(cors({
   origin: allowedOrigins,
@@ -99,7 +99,7 @@ app.prepare().then(() => {
 
   // Start the server
   httpServer.listen(PORT, () => {
-    console.log(`> Server listening on port ${PORT}`);
+    console.log(`Server running on port ${PORT}`);
   });
 });
 

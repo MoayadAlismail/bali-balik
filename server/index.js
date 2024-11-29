@@ -36,22 +36,22 @@ server.use(cors(corsOptions));
 app.prepare().then(() => {
   const httpServer = http.createServer(server);
   
-  // Socket.IO configuration with explicit timeouts
+  // Socket.IO configuration with adjusted timeouts
   const io = new Server(httpServer, {
     cors: corsOptions,
     transports: ['websocket', 'polling'],
     path: '/socket.io/',
-    pingTimeout: 10000,
-    pingInterval: 5000,
-    upgradeTimeout: 30000,
+    pingTimeout: 60000,
+    pingInterval: 25000,
+    upgradeTimeout: 60000,
     allowUpgrades: true,
-    perMessageDeflate: false,  // Disable compression for testing
+    perMessageDeflate: true,
     maxHttpBufferSize: 1e8
   });
 
-  // Add connection logging
+  // Add more detailed connection logging
   io.engine.on('connection_error', (err) => {
-    console.error('Connection error:', err);
+    console.error('Connection error:', err.code, err.message, err.context);
   });
 
   io.on('connection', (socket) => {

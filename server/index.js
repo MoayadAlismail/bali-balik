@@ -4,10 +4,6 @@ const { Server } = require('socket.io');
 const cors = require('cors');
 const next = require('next');
 
-// Global game state
-const rooms = new Map();
-const topics = ['حيوانات', 'طعام', 'رياضة', 'مدن', 'مهن', 'ألوان', 'أفلام', 'مشاهير'];
-
 // Set NODE_ENV if not set
 process.env.NODE_ENV = process.env.NODE_ENV || 'production';
 
@@ -20,13 +16,22 @@ const handle = app.getRequestHandler();
 const server = express();
 
 // Create HTTP server with explicit timeouts
-const httpServer = http.createServer({
-  keepAliveTimeout: 120000,
-  headersTimeout: 120000,
-  timeout: 120000,
-}, server);
+const httpServer = http.createServer(server);
 
-// CORS configuration with explicit WebSocket support
+// Set timeouts BEFORE creating server
+httpServer.keepAliveTimeout = 120000;
+httpServer.headersTimeout = 120000;
+
+// Add health check endpoint
+server.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    env: process.env.NODE_ENV
+  });
+});
+
+// CORS configuration
 const corsOptions = {
   origin: [
     'https://www.balibalik.com',
@@ -35,84 +40,60 @@ const corsOptions = {
     'http://localhost:3000'
   ],
   methods: ['GET', 'POST', 'OPTIONS'],
-  credentials: true,
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  handlePreflightRequest: (req, res) => {
-    res.writeHead(200, {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET,POST',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-      'Access-Control-Allow-Credentials': true
-    });
-    res.end();
-  }
+  credentials: true
 };
 
 server.use(cors(corsOptions));
 
-// Prepare Next.js
-app.prepare().then(() => {
-  // Socket.IO configuration with enhanced WebSocket settings
-  const io = new Server(httpServer, {
-    cors: corsOptions,
-    pingTimeout: 60000,
-    pingInterval: 25000,
-    transports: ['websocket', 'polling'],
-    allowUpgrades: true,
-    perMessageDeflate: false,
-    maxHttpBufferSize: 1e8,
-    path: '/socket.io/',
-    addTrailingSlash: false,
-    connectionStateRecovery: {
-      maxDisconnectionDuration: 2000,
-      skipMiddlewares: true,
-    },
-    allowEIO3: true,
-    wsEngine: 'ws'
-  });
+// Global game state
+const rooms = new Map();
+const topics = ['حيوانات', 'طعام', 'رياضة', 'مدن', 'مهن', 'ألوان', 'أفلام', 'مشاهير'];
 
-  // Add connection logging
-  io.engine.on('connection_error', (err) => {
-    console.error('Connection error:', {
-      code: err.code,
-      message: err.message,
-      context: err.context,
-      req: err.req && {
-        url: err.req.url,
-        headers: err.req.headers,
-        method: err.req.method
-      }
+// Prepare Next.js BEFORE setting up Socket.IO
+app.prepare()
+  .then(() => {
+    // Socket.IO configuration
+    const io = new Server(httpServer, {
+      cors: corsOptions,
+      transports: ['websocket', 'polling']
     });
-  });
 
-  // Socket connection handling
-  io.on('connection', (socket) => {
-    console.log('New connection:', socket.id);
+    // Socket connection handling
+    io.on('connection', (socket) => {
+      console.log('New connection:', socket.id);
+      
+      socket.on('create-game', () => createGame(socket));
+      socket.on('join-room', (data) => joinRoom(socket, data, io));
+      socket.on('start-game', (pin) => startGame(socket, pin, io));
+      socket.on('submit-guess', (data) => handleGuess(socket, data, io));
+      socket.on('disconnect', () => handleDisconnect(socket, io));
+    });
 
-    socket.on('create-game', () => createGame(socket));
-    socket.on('join-room', (data) => joinRoom(socket, data, io));
-    socket.on('start-game', (pin) => startGame(socket, pin, io));
-    socket.on('submit-guess', (data) => handleGuess(socket, data, io));
-    socket.on('disconnect', () => handleDisconnect(socket, io));
-  });
+    // Handle Next.js routes AFTER Socket.IO setup
+    server.all('*', (req, res) => {
+      return handle(req, res);
+    });
 
-  // Handle all other routes with Next.js
-  server.all('*', (req, res) => {
-    return handle(req, res);
-  });
-
-  // Listen on 0.0.0.0 as required by Render
-  const PORT = process.env.PORT || 10000;
-  httpServer.listen(PORT, '0.0.0.0', () => {
-    console.log(`
+    // Start server on explicit host and port
+    const PORT = process.env.PORT || 10000;
+    httpServer.listen(PORT, '0.0.0.0', (error) => {
+      if (error) {
+        console.error('Failed to start server:', error);
+        process.exit(1);
+      }
+      console.log(`
 ====================================
 🚀 Server running in ${dev ? 'development' : 'production'} mode
 🌐 Server listening on port ${PORT}
 🔌 WebSocket enabled
 ====================================
-    `);
+      `);
+    });
+  })
+  .catch((err) => {
+    console.error('Error during Next.js preparation:', err);
+    process.exit(1);
   });
-});
 
 // Game logic functions
 function createGame(socket) {
@@ -215,9 +196,17 @@ function calculateResults(guesses) {
 // Error handling
 process.on('uncaughtException', (err) => {
   console.error('Uncaught Exception:', err);
+  // Don't exit the process in production
+  if (dev) {
+    process.exit(1);
+  }
 });
 
 process.on('unhandledRejection', (err) => {
   console.error('Unhandled Rejection:', err);
+  // Don't exit the process in production
+  if (dev) {
+    process.exit(1);
+  }
 });
 

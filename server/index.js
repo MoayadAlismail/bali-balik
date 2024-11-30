@@ -6,6 +6,11 @@ const cors = require('cors');
 const app = express();
 const httpServer = createServer(app);
 
+// Set keep-alive timeout to 120 seconds (120000 ms)
+httpServer.keepAliveTimeout = 120000;
+// Set headers timeout to 120 seconds (120000 ms)
+httpServer.headersTimeout = 120000;
+
 // Near the top of the file, after imports
 // Simple logging that's guaranteed to show in Render
 const log = (message, data = '') => {
@@ -277,9 +282,13 @@ function calculateResults(guesses) {
 }
 
 const PORT = process.env.PORT || 3001;
-httpServer.listen(PORT, () => {
+httpServer.listen(PORT, '0.0.0.0', () => {
   log('==================================');
   log(`Server starting on port ${PORT}`);
+  log(`Server configured with:`);
+  log(`- keepAliveTimeout: ${httpServer.keepAliveTimeout}ms`);
+  log(`- headersTimeout: ${httpServer.headersTimeout}ms`);
+  log(`- Host: 0.0.0.0`);
   log(`Allowed Origins: ${allowedOrigins.join(', ')}`);
   log('==================================');
 });

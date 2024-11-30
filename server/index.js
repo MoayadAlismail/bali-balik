@@ -31,11 +31,15 @@ server.get('/health', (req, res) => {
 
 // CORS configuration
 const corsOptions = {
-  origin: '*',
+  origin: process.env.CORS_ALLOWED_ORIGINS?.split(',') || [
+    'https://www.balibalik.com',
+    'https://balibalik.com',
+    'https://bali-balik.onrender.com',
+    'http://localhost:3000'
+  ],
   methods: ['GET', 'POST', 'OPTIONS'],
   credentials: true,
   allowedHeaders: ['Content-Type', 'Authorization'],
-  maxAge: 600 // Increase CORS cache
 };
 
 server.use(cors(corsOptions));
@@ -50,12 +54,7 @@ app.prepare().then(() => {
   
   // Socket.IO configuration
   const io = new Server(httpServer, {
-    cors: {
-      origin: '*',
-      methods: ['GET', 'POST', 'OPTIONS'],
-      credentials: true,
-      allowedHeaders: ['Content-Type', 'Authorization']
-    },
+    cors: corsOptions,
     transports: ['websocket', 'polling'],
     allowUpgrades: true,
     pingTimeout: 60000,

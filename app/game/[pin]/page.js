@@ -27,21 +27,24 @@ export default function GameRoom({ params }) {
     const isDevelopment = process.env.NODE_ENV === 'development';
     const socketUrl = isDevelopment 
       ? 'http://localhost:3000' 
-      : 'https://bali-balik.onrender.com';
+      : process.env.NEXT_PUBLIC_SOCKET_URL;
     
-    console.log('Connecting to:', 'https://bali-balik.onrender.com');
+    console.log('Connecting to:', socketUrl);
     
-    const newSocket = io('https://bali-balik.onrender.com', {
+    const newSocket = io(socketUrl, {
       withCredentials: true,
       transports: ['websocket', 'polling'],
       autoConnect: true,
       reconnection: true,
       reconnectionAttempts: 10,
       reconnectionDelay: 1000,
-      secure: !isDevelopment,
+      secure: true,
       path: '/socket.io/',
       timeout: 60000,
-      forceNew: true
+      forceNew: true,
+      extraHeaders: {
+        'Origin': process.env.NEXT_PUBLIC_APP_URL || 'https://www.balibalik.com'
+      }
     });
 
     // Add connection event listeners

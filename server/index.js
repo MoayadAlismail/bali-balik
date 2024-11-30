@@ -4,6 +4,10 @@ const { Server } = require('socket.io');
 const cors = require('cors');
 const next = require('next');
 
+// Global game state
+const rooms = new Map();
+const topics = ['حيوانات', 'طعام', 'رياضة', 'مدن', 'مهن', 'ألوان', 'أفلام', 'مشاهير'];
+
 // Set NODE_ENV if not set
 process.env.NODE_ENV = process.env.NODE_ENV || 'production';
 
@@ -17,27 +21,12 @@ const server = express();
 
 // Create HTTP server with explicit timeouts
 const httpServer = http.createServer({
-  keepAliveTimeout: 120000, // 120 seconds
-  headersTimeout: 120000, // 120 seconds
-  timeout: 120000, // 120 seconds
+  keepAliveTimeout: 120000,
+  headersTimeout: 120000,
+  timeout: 120000,
 }, server);
 
-// Additional timeout settings
-server.keepAliveTimeout = 120000;
-server.timeout = 120000;
-httpServer.keepAliveTimeout = 120000;
-httpServer.headersTimeout = 120000;
-
-// Health check endpoint
-server.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'OK',
-    timestamp: new Date().toISOString(),
-    env: process.env.NODE_ENV
-  });
-});
-
-// CORS configuration
+// CORS configuration with explicit WebSocket support
 const corsOptions = {
   origin: [
     'https://www.balibalik.com',
@@ -47,20 +36,53 @@ const corsOptions = {
   ],
   methods: ['GET', 'POST', 'OPTIONS'],
   credentials: true,
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  handlePreflightRequest: (req, res) => {
+    res.writeHead(200, {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET,POST',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Allow-Credentials': true
+    });
+    res.end();
+  }
 };
 
 server.use(cors(corsOptions));
 
 // Prepare Next.js
 app.prepare().then(() => {
-  // Socket.IO configuration
+  // Socket.IO configuration with enhanced WebSocket settings
   const io = new Server(httpServer, {
     cors: corsOptions,
     pingTimeout: 60000,
     pingInterval: 25000,
     transports: ['websocket', 'polling'],
-    path: '/socket.io/'
+    allowUpgrades: true,
+    perMessageDeflate: false,
+    maxHttpBufferSize: 1e8,
+    path: '/socket.io/',
+    addTrailingSlash: false,
+    connectionStateRecovery: {
+      maxDisconnectionDuration: 2000,
+      skipMiddlewares: true,
+    },
+    allowEIO3: true,
+    wsEngine: 'ws'
+  });
+
+  // Add connection logging
+  io.engine.on('connection_error', (err) => {
+    console.error('Connection error:', {
+      code: err.code,
+      message: err.message,
+      context: err.context,
+      req: err.req && {
+        url: err.req.url,
+        headers: err.req.headers,
+        method: err.req.method
+      }
+    });
   });
 
   // Socket connection handling

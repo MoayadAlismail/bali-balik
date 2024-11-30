@@ -24,27 +24,32 @@ export default function GameRoom({ params }) {
   useEffect(() => {
     console.log('Initializing socket connection...');
     
-    const isDevelopment = process.env.NODE_ENV === 'development';
-    const socketUrl = isDevelopment 
-      ? 'http://localhost:3000' 
-      : process.env.NEXT_PUBLIC_SOCKET_URL;
-    
+    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL;
     console.log('Connecting to:', socketUrl);
     
     const newSocket = io(socketUrl, {
-      withCredentials: true,
-      transports: ['websocket', 'polling'],
-      autoConnect: true,
-      reconnection: true,
-      reconnectionAttempts: 10,
-      reconnectionDelay: 1000,
-      secure: true,
-      path: '/socket.io/',
-      timeout: 60000,
+      transports: ['websocket'],
+      upgrade: false,
       forceNew: true,
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      timeout: 20000,
+      path: '/socket.io/',
+      withCredentials: true,
       extraHeaders: {
-        'Origin': process.env.NEXT_PUBLIC_APP_URL || 'https://www.balibalik.com'
+        'Origin': process.env.NEXT_PUBLIC_APP_URL
       }
+    });
+
+    // Add better error logging
+    newSocket.on('connect_error', (error) => {
+      console.error('Socket connection error:', {
+        message: error.message,
+        description: error.description,
+        type: error.type,
+        transport: newSocket.io?.engine?.transport?.name
+      });
     });
 
     // Add connection event listeners
@@ -54,16 +59,6 @@ export default function GameRoom({ params }) {
         console.log('Joining room with:', { pin, playerName, role });
         newSocket.emit('join-room', { pin, playerName, role });
       }
-    });
-
-    newSocket.on('connect_error', (error) => {
-      console.error('Socket connection error:', {
-        message: error.message,
-        type: error.type,
-        description: error.description,
-        transport: newSocket.io?.engine?.transport?.name,
-        url: socketUrl
-      });
     });
 
     newSocket.on('disconnect', (reason) => {

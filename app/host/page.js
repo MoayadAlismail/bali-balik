@@ -101,7 +101,7 @@ export default function HostGame() {
               (!playerName.trim()) ? 'opacity-50 cursor-not-allowed' : ''
             }`}
           >
-          ابدأ اللعبة tetst🎮
+          ابدأ اللعبة 🎮
           </motion.button>
         </motion.div>
       </motion.div>

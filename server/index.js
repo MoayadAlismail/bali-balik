@@ -27,7 +27,7 @@ server.get('/health', (req, res) => {
   res.status(200).json({
     status: 'OK',
     timestamp: new Date().toISOString(),
-    env: process.env.NODE_ENV
+    env: process.env.NODE_ENV,
   });
 });
 
@@ -37,12 +37,11 @@ const corsOptions = {
     'https://www.balibalik.com',
     'https://balibalik.com',
     'https://bali-balik.onrender.com',
-    'http://localhost:3000'
+    'http://localhost:3000',
   ],
   methods: ['GET', 'POST', 'OPTIONS'],
-  credentials: true
+  credentials: true,
 };
-
 server.use(cors(corsOptions));
 
 // Global game state
@@ -55,18 +54,26 @@ app.prepare()
     // Socket.IO configuration
     const io = new Server(httpServer, {
       cors: corsOptions,
-      transports: ['websocket', 'polling']
+      transports: ['websocket', 'polling'],
+      path: '/socket.io/',
     });
 
     // Socket connection handling
     io.on('connection', (socket) => {
       console.log('New connection:', socket.id);
-      
+
       socket.on('create-game', () => createGame(socket));
       socket.on('join-room', (data) => joinRoom(socket, data, io));
       socket.on('start-game', (pin) => startGame(socket, pin, io));
       socket.on('submit-guess', (data) => handleGuess(socket, data, io));
-      socket.on('disconnect', () => handleDisconnect(socket, io));
+      socket.on('disconnect', (reason) => {
+        console.log(`Client disconnected: ${socket.id}, Reason: ${reason}`);
+        handleDisconnect(socket, io);
+      });
+
+      socket.on('error', (err) => {
+        console.error(`Socket error for ${socket.id}:`, err);
+      });
     });
 
     // Handle Next.js routes AFTER Socket.IO setup
@@ -105,7 +112,7 @@ function createGame(socket) {
     host: socket.id,
     state: 'waiting',
     topic: null,
-    guesses: new Map()
+    guesses: new Map(),
   });
   socket.emit('game-created', pin);
 }
@@ -163,7 +170,7 @@ function handleGuess(socket, { pin, playerName, guess }, io) {
 function handleDisconnect(socket, io) {
   for (const [pin, room] of rooms.entries()) {
     if (room.players.includes(socket.data?.playerName)) {
-      room.players = room.players.filter(name => name !== socket.data.playerName);
+      room.players = room.players.filter((name) => name !== socket.data.playerName);
       io.to(pin).emit('player-left', room.players);
     }
     if (room.host === socket.id) {
@@ -196,17 +203,10 @@ function calculateResults(guesses) {
 // Error handling
 process.on('uncaughtException', (err) => {
   console.error('Uncaught Exception:', err);
-  // Don't exit the process in production
-  if (dev) {
-    process.exit(1);
-  }
+  if (dev) process.exit(1);
 });
 
 process.on('unhandledRejection', (err) => {
   console.error('Unhandled Rejection:', err);
-  // Don't exit the process in production
-  if (dev) {
-    process.exit(1);
-  }
+  if (dev) process.exit(1);
 });
-

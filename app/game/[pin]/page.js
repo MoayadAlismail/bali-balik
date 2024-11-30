@@ -27,7 +27,7 @@ export default function GameRoom({ params }) {
     const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL;
     console.log('Connecting to:', socketUrl);
     
-    const newSocket = io(socketUrl, {
+    const newSocket = io(process.env.NEXT_PUBLIC_SOCKET_URL, {
       transports: ['websocket'],
       upgrade: false,
       forceNew: true,

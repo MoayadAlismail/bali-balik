@@ -49,7 +49,7 @@ const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS
       'https://www.balibalik.com',
       'https://balibalik.com',
       'http://localhost:3000',
-      'https://bali-balik.onrender.com'
+      'https://bali-balik-production-55f7.up.railway.app'
     ];
 
 console.log('Server starting...');
@@ -59,8 +59,19 @@ app.use(cors({
   origin: allowedOrigins,
   methods: ['GET', 'POST', 'OPTIONS'],
   credentials: true,
-  optionsSuccessStatus: 200
+  optionsSuccessStatus: 200,
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range']
 }));
+
+// Add WebSocket specific headers
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', allowedOrigins);
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.header('Access-Control-Allow-Credentials', true);
+  next();
+});
 
 // Game state management
 const rooms = new Map();
@@ -81,13 +92,35 @@ const io = new Server(httpServer, {
     methods: ['GET', 'POST'],
     credentials: true
   },
-  transports: ['websocket'],
-  pingTimeout: 60000,
-  pingInterval: 25000
+  transports: ['websocket', 'polling'],
+  allowUpgrades: true,
+  upgradeTimeout: 10000,
+  pingTimeout: 120000,
+  pingInterval: 25000,
+  connectTimeout: 60000,
+  path: '/socket.io/',
+  debug: true
+});
+
+io.engine.on("connection_error", (err) => {
+  log(`Connection Error: ${err.code} - ${err.message}`);
+  log(`Connection Error Details:`, err);
 });
 
 io.on('connection', (socket) => {
-  log(`Socket connected: ${socket.id}`);
+  log(`Socket connected: ${socket.id} (Transport: ${socket.conn.transport.name})`);
+  
+  socket.on('error', (error) => {
+    log(`Socket ${socket.id} error:`, error);
+  });
+
+  socket.on('connect_error', (error) => {
+    log(`Socket ${socket.id} connect_error:`, error);
+  });
+
+  socket.on('connect_timeout', (timeout) => {
+    log(`Socket ${socket.id} connect_timeout:`, timeout);
+  });
   
   // Debug socket rooms every 10 seconds
   const debugInterval = setInterval(() => {

@@ -21,8 +21,8 @@ const server = express();
 server.timeout = 120000; // 2 minutes
 
 // Health check endpoint with detailed response
-server.get('/health', (req, res) => {
-  res.status(200).json({
+server.get('/', (req, res) => {
+  res.status(200).send({
     status: 'OK',
     timestamp: new Date().toISOString(),
     env: process.env.NODE_ENV
@@ -31,12 +31,22 @@ server.get('/health', (req, res) => {
 
 // CORS configuration
 const corsOptions = {
-  origin: process.env.CORS_ALLOWED_ORIGINS?.split(',') || [
-    'https://www.balibalik.com',
-    'https://balibalik.com',
-    'https://bali-balik.onrender.com',
-    'http://localhost:3000'
-  ],
+  origin: (origin, callback) => {
+    const allowedOrigins = [
+      'https://www.balibalik.com',
+      'https://balibalik.com',
+      'https://bali-balik.onrender.com',
+      'http://localhost:3000'
+    ];
+    
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('Origin rejected:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ['GET', 'POST', 'OPTIONS'],
   credentials: true,
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -61,10 +71,17 @@ app.prepare().then(() => {
     pingInterval: 25000,
     connectTimeout: 60000,
     path: '/socket.io/',
-    maxHttpBufferSize: 1e8
+    maxHttpBufferSize: 1e8,
+    cookie: {
+      name: 'io',
+      path: '/',
+      httpOnly: true,
+      sameSite: 'none',
+      secure: true
+    }
   });
 
-  // Add more detailed connection logging
+  // Add detailed connection logging
   io.engine.on('connection_error', (err) => {
     console.error('Connection error:', {
       code: err.code,
@@ -73,7 +90,8 @@ app.prepare().then(() => {
       req: {
         url: err.req?.url,
         headers: err.req?.headers,
-        method: err.req?.method
+        method: err.req?.method,
+        origin: err.req?.headers?.origin
       }
     });
   });
@@ -110,7 +128,6 @@ app.prepare().then(() => {
 🚀 Server running in ${dev ? 'development' : 'production'} mode
 🌐 Server URL: http://localhost:${PORT}
 🔌 WebSocket enabled
-🏥 Health check: /health
 ====================================
     `);
   });

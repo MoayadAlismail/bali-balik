@@ -11,34 +11,34 @@ export default function HostGame() {
   const [gamePin, setGamePin] = useState('');
 
   useEffect(() => {
-    // const newSocket = io("http://localhost:3000", {
-    //   transports: ["websocket"],
-    //   path: "/socket.io/",
-    // });
-    const newSocket = io('https://bali-balik.onrender.com', {
+    const newSocket = io('wss://bali-balik.onrender.com', {
       withCredentials: true,
       transports: ['websocket', 'polling'],
       autoConnect: true,
       reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 2000,
+      timeout: 10000,
       secure: true,
       rejectUnauthorized: false,
     });
 
     newSocket.on('connect', () => {
       console.log('Connected to server');
-      // Request a new game PIN from the server
       newSocket.emit('create-game');
     });
 
-    newSocket.on('game-created', (pin) => {
-      console.log('Game created with PIN:', pin);
-      setGamePin(pin);
+    newSocket.on('connect_error', (error) => {
+      console.error('Connection error:', error.message);
+      if (error.description) console.error('Error description:', error.description);
     });
 
-    newSocket.on('connect_error', (error) => {
-      console.error('Connection error:', error);
+    newSocket.on('error', (error) => {
+      console.error('Socket error:', error);
+    });
+
+    newSocket.on('disconnect', (reason) => {
+      console.log('Disconnected from server:', reason);
     });
 
     setSocket(newSocket);

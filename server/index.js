@@ -115,7 +115,6 @@ app.prepare().then(() => {
     socket.on('guess', (data) => handleGuess(socket, data));
     socket.on('disconnect', () => handleDisconnect(socket));
   });
-
   // Handle Next.js requests
   server.all('*', (req, res) => {
     return handle(req, res);
@@ -231,3 +230,4 @@ function calculateResults(guesses) {
   }
   return results;
 }
+

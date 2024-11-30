@@ -49,7 +49,7 @@ const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS
       'https://www.balibalik.com',
       'https://balibalik.com',
       'http://localhost:3000',
-      'https://bali-balik-production-55f7.up.railway.app'
+      'https://balibalik.up.railway.app'
     ];
 
 console.log('Server starting...');

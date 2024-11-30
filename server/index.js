@@ -4,22 +4,29 @@ const { Server } = require('socket.io');
 const cors = require('cors');
 const next = require('next');
 
-// Global game state
-const rooms = new Map();
-const topics = ['حيوانات', 'طعام', 'رياضة', 'مدن', 'مهن', 'ألوان', 'أفلام', 'مشاهير'];
+// Set NODE_ENV if not set
+process.env.NODE_ENV = process.env.NODE_ENV || 'production';
 
 // Configuration
 const dev = process.env.NODE_ENV !== 'production';
 const app = next({ dev });
 const handle = app.getRequestHandler();
 
-// Initialize Express and create HTTP server
+// Initialize Express
 const server = express();
-const httpServer = http.createServer(server);
 
-// Important: Set timeouts to fix 502 errors on Render
-httpServer.keepAliveTimeout = 120000; // 120 seconds
-httpServer.headersTimeout = 120000; // 120 seconds
+// Create HTTP server with explicit timeouts
+const httpServer = http.createServer({
+  keepAliveTimeout: 120000, // 120 seconds
+  headersTimeout: 120000, // 120 seconds
+  timeout: 120000, // 120 seconds
+}, server);
+
+// Additional timeout settings
+server.keepAliveTimeout = 120000;
+server.timeout = 120000;
+httpServer.keepAliveTimeout = 120000;
+httpServer.headersTimeout = 120000;
 
 // Health check endpoint
 server.get('/health', (req, res) => {

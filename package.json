@@ -1,13 +1,12 @@
-
 {
   "name": "bali-balik",
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node server/index.js",
+    "dev": "next dev",
     "build": "next build",
-    "start": "node .next/standalone/server.js",
-    "dev:server": "nodemon server/index.js"
+    "start": "node start.js",
+    "lint": "next lint"
   },
   "dependencies": {
     "autoprefixer": "^10.0.1",

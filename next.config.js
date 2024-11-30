@@ -1,12 +1,7 @@
 /** @type {import('next').NextConfig} */
-
-module.exports = {
+const nextConfig = {
     output: 'standalone',
     reactStrictMode: false,
-  }
-
-const nextConfig = {
-    
     async headers() {
         return [
             {

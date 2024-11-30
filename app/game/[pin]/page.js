@@ -27,11 +27,11 @@ export default function GameRoom({ params }) {
     const isDevelopment = process.env.NODE_ENV === 'development';
     const socketUrl = isDevelopment 
       ? 'http://localhost:3000' 
-      : 'https://balibalik.koyeb.app';
+      : 'https://bali-balik.onrender.com';
     
-    console.log('Connecting to:', 'https://balibalik.koyeb.app');
+    console.log('Connecting to:', 'https://bali-balik.onrender.com');
     
-    const newSocket = io('https://balibalik.koyeb.app', {
+    const newSocket = io('https://bali-balik.onrender.com', {
       withCredentials: true,
       transports: ['websocket', 'polling'],
       autoConnect: true,

@@ -12,7 +12,7 @@ export default function JoinGame() {
 
   useEffect(() => {
     // Initialize socket connection with new Render URL
-    const newSocket = io('https://balibalik.koyeb.app', {
+    const newSocket = io('https://bali-balik.onrender.com', {
       withCredentials: true,
       transports: ['websocket'],
       autoConnect: true,

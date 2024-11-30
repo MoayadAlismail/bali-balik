@@ -15,7 +15,7 @@ export default function HostGame() {
     //   transports: ["websocket"],
     //   path: "/socket.io/",
     // });
-    const newSocket = io('https://balibalik.koyeb.app', {
+    const newSocket = io('https://bali-balik.onrender.com', {
       withCredentials: true,
       transports: ['websocket', 'polling'],
       autoConnect: true,

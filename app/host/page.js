@@ -45,7 +45,7 @@ export default function HostGame() {
 
     return () => {
       if (newSocket) {
-        newSocket.disconnect();
+        newSocket.close();
       }
     };
   }, []);

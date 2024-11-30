@@ -38,7 +38,7 @@ export default function JoinGame() {
 
     // Cleanup on unmount
     return () => {
-      if (newSocket) newSocket.disconnect();
+      if (newSocket) newSocket.close();
     };
   }, []); // Empty dependency array means this runs once on mount
 

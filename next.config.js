@@ -1,5 +1,11 @@
 /** @type {import('next').NextConfig} */
+
+module.exports = {
+    reactStrictMode: false,
+  }
+
 const nextConfig = {
+    
     async headers() {
         return [
             {

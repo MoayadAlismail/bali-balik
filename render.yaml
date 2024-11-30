@@ -3,7 +3,7 @@ services:
     name: bali-balik
     env: node
     buildCommand: npm install && npm run build
-    startCommand: npm start
+    startCommand: node server/index.js
     envVars:
       - key: PORT
         value: 10000

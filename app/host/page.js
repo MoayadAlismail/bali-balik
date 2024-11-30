@@ -17,16 +17,13 @@ export default function HostGame() {
     // });
     const newSocket = io('https://balibalik.koyeb.app', {
       withCredentials: true,
-      transports: ['websocket'],
+      transports: ['websocket', 'polling'],
       autoConnect: true,
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
       secure: true,
       rejectUnauthorized: false,
-      extraHeaders: {
-        'Origin': 'https://www.balibalik.com',
-      }
     });
 
     newSocket.on('connect', () => {

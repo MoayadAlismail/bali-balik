@@ -17,17 +17,25 @@ const PORT = process.env.PORT || 3000;
 // Initialize Express and Middleware
 const server = express();
 
-// Health check endpoint - Move this before other middleware
+// Increase timeout
+server.timeout = 120000; // 2 minutes
+
+// Health check endpoint with detailed response
 server.get('/health', (req, res) => {
-  res.status(200).send('OK');
+  res.status(200).json({
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    env: process.env.NODE_ENV
+  });
 });
 
 // CORS configuration
 const corsOptions = {
-  origin: '*',  // Temporarily allow all origins for testing
+  origin: '*',
   methods: ['GET', 'POST', 'OPTIONS'],
   credentials: true,
   allowedHeaders: ['Content-Type', 'Authorization'],
+  maxAge: 600 // Increase CORS cache
 };
 
 server.use(cors(corsOptions));
@@ -36,31 +44,49 @@ server.use(cors(corsOptions));
 app.prepare().then(() => {
   const httpServer = http.createServer(server);
   
-  // Socket.IO configuration with adjusted timeouts
+  // Increase server timeout
+  httpServer.timeout = 120000;
+  httpServer.keepAliveTimeout = 120000;
+  
+  // Socket.IO configuration
   const io = new Server(httpServer, {
-    cors: corsOptions,
+    cors: {
+      origin: '*',
+      methods: ['GET', 'POST', 'OPTIONS'],
+      credentials: true,
+      allowedHeaders: ['Content-Type', 'Authorization']
+    },
     transports: ['websocket', 'polling'],
-    path: '/socket.io/',
+    allowUpgrades: true,
     pingTimeout: 60000,
     pingInterval: 25000,
-    upgradeTimeout: 60000,
-    allowUpgrades: true,
-    perMessageDeflate: true,
+    connectTimeout: 60000,
+    path: '/socket.io/',
     maxHttpBufferSize: 1e8
   });
 
   // Add more detailed connection logging
   io.engine.on('connection_error', (err) => {
-    console.error('Connection error:', err.code, err.message, err.context);
+    console.error('Connection error:', {
+      code: err.code,
+      message: err.message,
+      context: err.context,
+      req: {
+        url: err.req?.url,
+        headers: err.req?.headers,
+        method: err.req?.method
+      }
+    });
   });
 
   io.on('connection', (socket) => {
-    console.log('=== New Connection ===');
-    console.log('Socket ID:', socket.id);
-    console.log('Transport:', socket.conn.transport.name);
-    console.log('Headers:', JSON.stringify(socket.handshake.headers, null, 2));
-    console.log('Query:', JSON.stringify(socket.handshake.query, null, 2));
-    console.log('===================');
+    console.log('New connection:', {
+      id: socket.id,
+      transport: socket.conn.transport.name,
+      address: socket.handshake.address,
+      query: socket.handshake.query,
+      headers: socket.handshake.headers
+    });
 
     socket.on('error', (error) => {
       console.error('Socket error:', error);
@@ -80,8 +106,14 @@ app.prepare().then(() => {
 
   // Start server with explicit host
   httpServer.listen(PORT, '0.0.0.0', () => {
-    console.log(`> Server running on port ${PORT}`);
-    console.log('> Mode:', dev ? 'development' : 'production');
+    console.log(`
+====================================
+🚀 Server running in ${dev ? 'development' : 'production'} mode
+🌐 Server URL: http://localhost:${PORT}
+🔌 WebSocket enabled
+🏥 Health check: /health
+====================================
+    `);
   });
 });
 

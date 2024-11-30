@@ -22,61 +22,63 @@ export default function GameRoom({ params }) {
 
   // Initialize socket connection when component mounts
   useEffect(() => {
-    // Debug logging
-    console.log('Environment variables:', {
-      SOCKET_URL: process.env.NEXT_PUBLIC_SOCKET_URL,
-      APP_URL: process.env.NEXT_PUBLIC_APP_URL
-    });
+    console.log('Initializing socket connection...');
     
     const isDevelopment = process.env.NODE_ENV === 'development';
     const socketUrl = isDevelopment 
       ? 'http://localhost:3000' 
       : 'https://balibalik.koyeb.app';
     
-    console.log('Attempting to connect to socket at:', socketUrl);
+    console.log('Connecting to:', 'https://balibalik.koyeb.app');
     
-    const newSocket = io(socketUrl, {
+    const newSocket = io('https://balibalik.koyeb.app', {
       withCredentials: true,
       transports: ['websocket', 'polling'],
       autoConnect: true,
       reconnection: true,
-      reconnectionAttempts: 5,
+      reconnectionAttempts: 10,
       reconnectionDelay: 1000,
       secure: !isDevelopment,
       path: '/socket.io/',
+      timeout: 60000,
+      forceNew: true
+    });
+
+    // Add connection event listeners
+    newSocket.on('connect', () => {
+      console.log('Socket connected successfully via:', newSocket.io.engine.transport.name);
+      if (pin && playerName && role) {
+        console.log('Joining room with:', { pin, playerName, role });
+        newSocket.emit('join-room', { pin, playerName, role });
+      }
     });
 
     newSocket.on('connect_error', (error) => {
-      console.error('Connection error details:', {
+      console.error('Socket connection error:', {
         message: error.message,
-        description: error.description,
         type: error.type,
+        description: error.description,
+        transport: newSocket.io?.engine?.transport?.name,
         url: socketUrl
       });
     });
 
-    // Set up event listeners
-    newSocket.on('connect', () => {
-      console.log('Connected to server');
-      // Only emit join-room after successful connection
-      newSocket.emit('join-room', { pin, playerName, role });
-    });
-
-    newSocket.on('error', (error) => {
-      console.error('Socket error:', error);
+    newSocket.on('disconnect', (reason) => {
+      console.log('Socket disconnected:', reason);
     });
 
     // Store socket in state
     setSocket(newSocket);
 
-    // Clean up on unmount
+    // Clean up
     return () => {
       if (newSocket) {
-        console.log('Disconnecting socket');
-        newSocket.disconnect();
+        console.log('Cleaning up socket connection');
+        newSocket.removeAllListeners();
+        newSocket.close();
       }
     };
-  }, [pin, playerName, role]); // Added dependencies
+  }, [pin, playerName, role]);
 
   // Set up game event listeners after socket is initialized
   useEffect(() => {

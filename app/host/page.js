@@ -45,7 +45,7 @@ export default function HostGame() {
 
     return () => {
       if (newSocket) {
-        newSocket.disconnect();
+        newSocket.close();
       }
     };
   }, []);
@@ -101,7 +101,7 @@ export default function HostGame() {
               (!playerName.trim()) ? 'opacity-50 cursor-not-allowed' : ''
             }`}
           >
-          ابدأ اللعبة 🎮
+          ابدأ اللعبة tetst🎮
           </motion.button>
         </motion.div>
       </motion.div>

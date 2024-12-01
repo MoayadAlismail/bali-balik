@@ -16,9 +16,11 @@ export default function HostGame() {
       transports: ['websocket'],
       autoConnect: true,
       reconnection: true,
+      // rejectUnauthorized: false;
       reconnectionAttempts: 10,
       reconnectionDelay: 2000,
       timeout: 10000,
+      path: '/socket.io/',
       secure: true,
       rejectUnauthorized: false,
     });

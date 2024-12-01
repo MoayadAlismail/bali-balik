@@ -14,6 +14,7 @@ export default function JoinGame() {
   useEffect(() => {
     const newSocket = io(process.env.NEXT_PUBLIC_SOCKET_URL, {
       withCredentials: true,
+      path: '/socket.io/',
       transports: ['websocket'],
       autoConnect: true,
       reconnection: true,

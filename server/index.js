@@ -8,13 +8,8 @@ const httpServer = createServer(app);
 
 // Get allowed origins from environment variable
 const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS 
-  ? process.env.CORS_ALLOWED_ORIGINS.split(',')
-  : [
-      'https://www.balibalik.com',
-      'https://balibalik.com',
-      'http://localhost:3000',
-      'https://balibalik.up.railway.app'
-    ];
+  ? process.env.CORS_ALLOWED_ORIGINS.split(',') 
+  : ['http://localhost:3000'];
 
 // CORS configuration
 app.use(cors({
@@ -187,7 +182,7 @@ app.get('/validate-pin/:pin', (req, res) => {
 });
 
 // Start server
-const PORT = process.env.PORT || 3001 || 3000;
+const PORT = process.env.PORT || 3001;
 httpServer.listen(PORT, '0.0.0.0', () => {
   console.log('==================================');
   console.log(`Server running on port ${PORT}`);

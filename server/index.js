@@ -34,7 +34,7 @@ const topics = [
 // Socket.IO setup
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.CLIENT_URL || "http://localhost:3000",
+    origin: allowedOrigins,
     methods: ["GET", "POST"],
     credentials: true
   },
@@ -184,7 +184,7 @@ app.get('/validate-pin/:pin', (req, res) => {
 });
 
 // Start server
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3001 || 3000;
 httpServer.listen(PORT, '0.0.0.0', () => {
   console.log('==================================');
   console.log(`Server running on port ${PORT}`);

@@ -29,32 +29,20 @@ export default function GameRoom({ params }) {
   useEffect(() => {
     console.log('Initializing socket connection...');
     
-    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL;
+    const socketUrl = process.env.NEXT_PUBLIC_SERVER_URL;
     console.log('Connecting to:', socketUrl);
     
-    const newSocket = io(process.env.NEXT_PUBLIC_SOCKET_URL, {
-      transports: ['websocket'],
-      upgrade: true,
-      forceNew: true,
+    const newSocket = io(process.env.NEXT_PUBLIC_SERVER_URL, {
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
       timeout: 20000,
-      path: '/socket.io/',
-      withCredentials: true,
-      extraHeaders: {
-        'Origin': process.env.NEXT_PUBLIC_APP_URL
-      }
+      transports: ['websocket', 'polling']
     });
 
     // Add better error logging
     newSocket.on('connect_error', (error) => {
-      console.error('Socket connection error:', {
-        message: error.message,
-        description: error.description,
-        type: error.type,
-        transport: newSocket.io?.engine?.transport?.name
-      });
+      console.log('Connection error:', error);
     });
 
     // Add connection event listeners
@@ -67,7 +55,11 @@ export default function GameRoom({ params }) {
     });
 
     newSocket.on('disconnect', (reason) => {
-      console.log('Socket disconnected:', reason);
+      console.log('Disconnected:', reason);
+      if (reason === 'io server disconnect') {
+        // Reconnect if server disconnected
+        newSocket.connect();
+      }
     });
 
     // Store socket in state
@@ -199,6 +191,30 @@ export default function GameRoom({ params }) {
       handleSubmitGuess();
     }
   };
+
+  // Add this function to handle reconnection
+  const connectWithRetry = () => {
+    const maxRetries = 5;
+    let retries = 0;
+
+    const tryConnect = () => {
+      if (retries >= maxRetries) {
+        console.error('Max reconnection attempts reached');
+        return;
+      }
+
+      socket.connect();
+      retries++;
+    };
+
+    socket.on('connect_error', () => {
+      console.log(`Reconnection attempt ${retries + 1}/${maxRetries}`);
+      setTimeout(tryConnect, 1000 * retries);
+    });
+  };
+
+  // Call this function when initializing your component
+  connectWithRetry();
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-8">

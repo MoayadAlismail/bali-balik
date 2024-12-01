@@ -34,8 +34,8 @@ const topics = [
 // Socket.IO setup
 const io = new Server(httpServer, {
   cors: {
-    origin: allowedOrigins,
-    methods: ['GET', 'POST'],
+    origin: process.env.CLIENT_URL || "http://localhost:3000",
+    methods: ["GET", "POST"],
     credentials: true
   },
   transports: ['websocket'],

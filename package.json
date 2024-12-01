@@ -10,13 +10,13 @@
   },
   "dependencies": {
     "@types/canvas-confetti": "^1.6.4",
+    "@types/node": "^20.11.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
     "autoprefixer": "^10.0.1",
     "canvas-confetti": "^1.9.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "@types/node": "^20.11.0",
-    "@types/react": "^18.2.0",
-    "@types/react-dom": "^18.2.0",
     "cors": "^2.8.5",
     "express": "^4.18.0",
     "framer-motion": "^10.16.4",
@@ -27,7 +27,8 @@
     "socket.io": "^4.7.0",
     "socket.io-client": "^4.7.0",
     "tailwind-merge": "^2.5.5",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "zustand": "^4.5.5"
   },
   "devDependencies": {
     "eslint": "^8",

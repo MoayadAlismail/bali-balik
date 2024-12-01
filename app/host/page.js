@@ -11,9 +11,9 @@ export default function HostGame() {
   const [gamePin, setGamePin] = useState('');
 
   useEffect(() => {
-    const newSocket = io('wss://balibalik.up.railway.app', {
+    const newSocket = io(process.env.NEXT_PUBLIC_SOCKET_URL, {
       withCredentials: true,
-      transports: ['websocket', 'polling'],
+      transports: ['websocket'],
       autoConnect: true,
       reconnection: true,
       reconnectionAttempts: 10,
@@ -26,6 +26,11 @@ export default function HostGame() {
     newSocket.on('connect', () => {
       console.log('Connected to server');
       newSocket.emit('create-game');
+    });
+
+    newSocket.on('game-created', (pin) => {
+      console.log('Game created with pin:', pin);
+      setGamePin(pin);
     });
 
     newSocket.on('connect_error', (error) => {

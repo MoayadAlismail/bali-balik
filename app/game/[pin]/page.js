@@ -15,10 +15,15 @@ export default function GameRoom({ params }) {
   const [currentTopic, setCurrentTopic] = useState('');
   const [guess, setGuess] = useState('');
   const [results, setResults] = useState(null);
-  const [players, setPlayers] = useState([]);
+  const [players, setPlayers] = useState(playerName ? [playerName] : []);
   const [timeLeft, setTimeLeft] = useState(null);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [submittedGuesses, setSubmittedGuesses] = useState([]);
+
+  // Debug players state changes
+  useEffect(() => {
+    console.log('Players state changed:', players);
+  }, [players]);
 
   // Initialize socket connection when component mounts
   useEffect(() => {
@@ -29,7 +34,7 @@ export default function GameRoom({ params }) {
     
     const newSocket = io(process.env.NEXT_PUBLIC_SOCKET_URL, {
       transports: ['websocket'],
-      upgrade: false,
+      upgrade: true,
       forceNew: true,
       reconnection: true,
       reconnectionAttempts: 5,
@@ -82,9 +87,24 @@ export default function GameRoom({ params }) {
   useEffect(() => {
     if (!socket) return; // Don't do anything if socket isn't initialized
 
-    socket.on('player-joined', (playersList) => {
-      console.log('Player joined:', playersList);
-      setPlayers(playersList);
+    socket.on('player-joined', (data) => {
+      console.log('Player joined event received:', data);
+      
+      if (data && Array.isArray(data.players)) {
+        console.log('Setting players from data.players:', data.players);
+        setPlayers(prevPlayers => {
+          const newPlayers = [...new Set([...data.players])];
+          console.log('New players array:', newPlayers);
+          return newPlayers;
+        });
+      } else if (Array.isArray(data)) {
+        console.log('Setting players from direct array:', data);
+        setPlayers(prevPlayers => {
+          const newPlayers = [...new Set([...data])];
+          console.log('New players array:', newPlayers);
+          return newPlayers;
+        });
+      }
     });
 
     socket.on('game-started', ({ topic, timeLeft }) => {
@@ -116,6 +136,11 @@ export default function GameRoom({ params }) {
       socket.off('game-results');
     };
   }, [socket]); // Only re-run if socket changes
+
+  // Also add a useEffect to monitor players state changes
+  useEffect(() => {
+    console.log('Players state updated:', players);
+  }, [players]);
 
   const handleSubmitGuess = () => {
     if (!socket) return; // Guard clause for socket
@@ -182,17 +207,22 @@ export default function GameRoom({ params }) {
           <h2 className="text-2xl mb-4">كود الغرفة: {pin}</h2>
           <div className="mb-4">
             <h3 className="text-xl mb-2">اللاعبين:</h3>
-            <ul className="space-y-2">
-              {players.map((player, index) => (
-                <li key={index} className="text-lg">{player}</li>
-              ))}
-            </ul>
+            {players.length > 0 ? (
+              <ul className="space-y-2">
+                {players.map((player, index) => (
+                  <li key={index} className="text-lg">
+                    {player} {player === playerName && '(أنت)'}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-gray-500">لا يوجد لاعبين حتى الآن</p>
+            )}
           </div>
           {role === 'host' && players.length > 0 && (
             <button
               onClick={startGame}
-              className="rounded-full bg-foreground text-background px-6 py-3 hover:bg-opacity-90 transition-colors"
-            >
+              className="rounded-lg bg-white text-black px-6 py-3 hover:bg-gray-100 transition-colors font-semibold border-2 border-black active:transform active:scale-95">
               ابدأ
             </button>
           )}

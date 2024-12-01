@@ -8,12 +8,11 @@ export default function JoinGame() {
   const [pin, setPin] = useState('');
   const [playerName, setPlayerName] = useState('');
   const [socket, setSocket] = useState(null);
+  const [error, setError] = useState(null);
   const router = useRouter();
 
   useEffect(() => {
-    // Initialize socket connection with new Render URL
-    // const newSocket = io('https://bali-balik.onrender.com', {
-    const newSocket = io('https://localhost:3000', {
+    const newSocket = io(process.env.NEXT_PUBLIC_SOCKET_URL, {
       withCredentials: true,
       transports: ['websocket'],
       autoConnect: true,
@@ -33,21 +32,44 @@ export default function JoinGame() {
 
     newSocket.on('connect_error', (error) => {
       console.error('Connection error:', error);
+      setError('خطأ في الاتصال بالخادم');
+    });
+
+    newSocket.on('join-error', (error) => {
+      console.error('Join error:', error);
+      setError(error.message);
+    });
+
+    newSocket.on('join-success', () => {
+      router.push(`/game/${pin}?role=player&name=${encodeURIComponent(playerName)}`);
     });
 
     setSocket(newSocket);
 
-    // Cleanup on unmount
     return () => {
       if (newSocket) newSocket.close();
     };
-  }, []); // Empty dependency array means this runs once on mount
+  }, []);
 
-  const handleJoin = () => {
-    if (pin.trim() && playerName.trim() && socket) {
-      // Emit join event before navigating
+  const handleJoin = async () => {
+    if (!pin.trim() || !playerName.trim() || !socket) return;
+    
+    setError(null);
+
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_SOCKET_URL}/validate-pin/${pin}`);
+      const data = await response.json();
+      
+      if (!data.valid) {
+        setError('رمز غير صالح');
+        return;
+      }
+
       socket.emit('join-room', { pin, playerName, role: 'player' });
-      router.push(`/game/${pin}?role=player&name=${encodeURIComponent(playerName)}`);
+      
+    } catch (err) {
+      console.error('Error validating PIN:', err);
+      setError('حدث خطأ أثناء محاولة الانضمام');
     }
   };
 
@@ -71,14 +93,13 @@ export default function JoinGame() {
           whileHover={{ scale: 1.02 }}
           className="relative mb-6"
         >
-
           <input
-          type="text"
-          placeholder="ادخل اسمك"
-          value={playerName}
-          onChange={(e) => setPlayerName(e.target.value)}
-          className="w-full p-4 text-2xl text-center border-3 border-[#FF9A8B] rounded-xl focus:border-[#FF6B6B] outline-black bg-white/50 backdrop-blur-sm transition-all"
-        />
+            type="text"
+            placeholder="ادخل اسمك"
+            value={playerName}
+            onChange={(e) => setPlayerName(e.target.value)}
+            className="w-full p-4 text-2xl text-center border-3 border-[#FF9A8B] rounded-xl focus:border-[#FF6B6B] outline-black bg-white/50 backdrop-blur-sm transition-all mb-4"
+          />
           <input
             type="text"
             value={pin}
@@ -89,11 +110,24 @@ export default function JoinGame() {
           />
         </motion.div>
 
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-center"
+          >
+            {error}
+          </motion.div>
+        )}
+
         <motion.button
           whileHover={{ scale: 1.05, backgroundColor: '#FF6B6B' }}
           whileTap={{ scale: 0.95 }}
           onClick={handleJoin}
-          className="w-full p-4 bg-[#FF9A8B] text-white rounded-xl text-xl font-bold shadow-lg hover:shadow-xl transition-all duration-300"
+          disabled={!pin.trim() || !playerName.trim()}
+          className={`w-full p-4 bg-[#FF9A8B] text-white rounded-xl text-xl font-bold shadow-lg hover:shadow-xl transition-all duration-300 ${
+            (!pin.trim() || !playerName.trim()) ? 'opacity-50 cursor-not-allowed' : ''
+          }`}
         >
           يلا نلعب! 🎮
         </motion.button>

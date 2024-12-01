@@ -54,7 +54,7 @@ export default function JoinGame() {
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#FF9A8B] to-[#FF6B6B] p-4">
       <Link 
         href="/"
-        className="absolute top-4 left-4 bg-white/90 p-3 rounded-full shadow-lg hover:bg-white transition-colors"
+        className="fixed top-4 left-4 z-50 bg-white/90 p-3 rounded-full shadow-lg hover:bg-white transition-colors md:absolute"
       >
         <motion.div
           whileHover={{ scale: 1.1 }}

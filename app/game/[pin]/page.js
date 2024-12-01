@@ -1,7 +1,8 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { getSocket } from '@/utils/socket';
+import { Confetti } from '@/components/ui/confetti';
 
 export default function GameRoom({ params }) {
   const searchParams = useSearchParams();
@@ -25,6 +26,7 @@ export default function GameRoom({ params }) {
   const [roundNumber, setRoundNumber] = useState(1);
   const [maxRounds, setMaxRounds] = useState(5);
   const [roundResults, setRoundResults] = useState(null);
+  const confettiRef = useRef(null);
 
   // Near the top of the component, parse the avatar from URL
   const avatarParam = searchParams.get('avatar');
@@ -178,6 +180,8 @@ export default function GameRoom({ params }) {
         if (reason === 'completed') {
           setScores(new Map(finalScores.map(({player, score}) => [player, score])));
           setGameState('game-over');
+          // Trigger confetti after a short delay
+          setTimeout(triggerWinnerConfetti, 500);
         }
       });
 
@@ -187,6 +191,17 @@ export default function GameRoom({ params }) {
         socket.off('game-ended');
       };
     }, [socket]);
+  
+    // Add this function to trigger confetti
+    const triggerWinnerConfetti = () => {
+      confettiRef.current?.fire({
+        spread: 90,
+        decay: 0.91,
+        scalar: 0.8,
+        particleCount: 100,
+        origin: { y: 0.6 }
+      });
+    };
   
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-8">
@@ -336,7 +351,22 @@ export default function GameRoom({ params }) {
         )}
   
         {gameState === 'game-over' && (
-          <div className="text-center">
+          <div className="text-center relative">
+            {/* Add Confetti component */}
+            <Confetti
+              ref={confettiRef}
+              className="absolute left-0 top-0 z-0 w-full h-full"
+              options={{
+                gravity: 0.5,
+                spread: 360,
+                ticks: 100,
+                decay: 0.94,
+                startVelocity: 30,
+                shapes: ['star'],
+                colors: ['#FFD700', '#FFA500', '#FF6B6B', '#FF9A8B'],
+              }}
+            />
+
             <h2 className="text-3xl mb-6">انتهت اللعبة!</h2>
             <div className="space-y-4">
               {Array.from(scores)
@@ -355,7 +385,7 @@ export default function GameRoom({ params }) {
                 ))}
             </div>
             {Array.from(scores).length > 0 && (
-              <div className="mt-8 text-xl">
+              <div className="mt-8 text-xl relative z-10">
                 🎉 مبروك {Array.from(scores)[0][0]}! 🎉
               </div>
             )}

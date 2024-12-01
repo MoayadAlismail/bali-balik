@@ -1,7 +1,7 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import io from 'socket.io-client';
+import { getSocket } from '@/utils/socket';
 
 export default function GameRoom({ params }) {
   const searchParams = useSearchParams();
@@ -9,8 +9,8 @@ export default function GameRoom({ params }) {
   const playerName = searchParams.get('name');
   const pin = params.pin;
   
-  // Initialize socket state
-  const [socket, setSocket] = useState(null);
+  // Initialize socket state using shared socket
+  const [socket] = useState(() => getSocket());
   const [gameState, setGameState] = useState('waiting');
   const [currentTopic, setCurrentTopic] = useState('');
   const [guess, setGuess] = useState('');
@@ -19,287 +19,348 @@ export default function GameRoom({ params }) {
   const [timeLeft, setTimeLeft] = useState(null);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [submittedGuesses, setSubmittedGuesses] = useState([]);
+  const [allGuesses, setAllGuesses] = useState([]);
+  const [totalPlayers, setTotalPlayers] = useState(0);
+  const [scores, setScores] = useState(new Map());
+  const [roundNumber, setRoundNumber] = useState(1);
+  const [maxRounds, setMaxRounds] = useState(5);
+  const [roundResults, setRoundResults] = useState(null);
 
-  // Debug players state changes
+  // Near the top of the component, parse the avatar from URL
+  const avatarParam = searchParams.get('avatar');
+  const playerAvatar = avatarParam ? JSON.parse(decodeURIComponent(avatarParam)) : null;
+
+  // Join room when component mounts
   useEffect(() => {
-    console.log('Players state changed:', players);
-  }, [players]);
+    if (!socket || !pin || !playerName || !role) return;
 
-  // Initialize socket connection when component mounts
-  useEffect(() => {
-    console.log('Initializing socket connection...');
-    
-    const socketUrl = process.env.NEXT_PUBLIC_SERVER_URL;
-    console.log('Connecting to:', socketUrl);
-    
-    const newSocket = io(process.env.NEXT_PUBLIC_SERVER_URL, {
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-      timeout: 20000,
-      transports: ['websocket', 'polling']
-    });
+    console.log('Joining room with:', { pin, playerName, role, avatar: playerAvatar });
+    socket.emit('join-room', { pin, playerName, role, avatar: playerAvatar });
 
-    // Add better error logging
-    newSocket.on('connect_error', (error) => {
-      console.log('Connection error:', error);
-    });
-
-    // Add connection event listeners
-    newSocket.on('connect', () => {
-      console.log('Socket connected successfully via:', newSocket.io.engine.transport.name);
-      if (pin && playerName && role) {
-        console.log('Joining room with:', { pin, playerName, role });
-        newSocket.emit('join-room', { pin, playerName, role });
-      }
-    });
-
-    newSocket.on('disconnect', (reason) => {
-      console.log('Disconnected:', reason);
-      if (reason === 'io server disconnect') {
-        // Reconnect if server disconnected
-        newSocket.connect();
-      }
-    });
-
-    // Store socket in state
-    setSocket(newSocket);
-
-    // Clean up
-    return () => {
-      if (newSocket) {
-        console.log('Cleaning up socket connection');
-        newSocket.removeAllListeners();
-        newSocket.close();
-      }
-    };
-  }, [pin, playerName, role]);
-
-  // Set up game event listeners after socket is initialized
-  useEffect(() => {
-    if (!socket) return; // Don't do anything if socket isn't initialized
-
+    // Set up event listeners
     socket.on('player-joined', (data) => {
       console.log('Player joined event received:', data);
-      
       if (data && Array.isArray(data.players)) {
-        console.log('Setting players from data.players:', data.players);
-        setPlayers(prevPlayers => {
-          const newPlayers = [...new Set([...data.players])];
-          console.log('New players array:', newPlayers);
-          return newPlayers;
-        });
-      } else if (Array.isArray(data)) {
-        console.log('Setting players from direct array:', data);
-        setPlayers(prevPlayers => {
-          const newPlayers = [...new Set([...data])];
-          console.log('New players array:', newPlayers);
-          return newPlayers;
-        });
+        setPlayers(data.players);
       }
     });
 
-    socket.on('game-started', ({ topic, timeLeft }) => {
-      console.log('Game started with topic:', topic);
+    socket.on('game-started', (data) => {
+      console.log('Game started with topic:', data.topic);
       setGameState('playing');
-      setCurrentTopic(topic);
-      setTimeLeft(timeLeft);
-      setHasSubmitted(false);
-      setGuess('');
+      setCurrentTopic(data.topic);
+      setTimeLeft(data.timeLeft);
+      setMaxRounds(data.maxRounds);
     });
 
     socket.on('timer-update', (time) => {
       setTimeLeft(time);
-      if (time <= 0) {
-        setGameState('results');
-      }
     });
 
-    socket.on('game-results', (matchResults) => {
-      setGameState('results');
-      setResults(matchResults);
+    socket.on('guesses-updated', ({ guesses, totalPlayers }) => {
+      console.log('Received updated guesses:', guesses);
+      setAllGuesses(guesses);
+      setTotalPlayers(totalPlayers);
     });
 
-    // Clean up listeners
+    // Cleanup
     return () => {
       socket.off('player-joined');
       socket.off('game-started');
       socket.off('timer-update');
-      socket.off('game-results');
+      socket.off('guesses-updated');
     };
-  }, [socket]); // Only re-run if socket changes
+  }, [socket, pin, playerName, role, playerAvatar]);
 
-  // Also add a useEffect to monitor players state changes
-  useEffect(() => {
-    console.log('Players state updated:', players);
-  }, [players]);
-
-  const handleSubmitGuess = () => {
-    if (!socket) return; // Guard clause for socket
-    if (guess.trim()) {
-      socket.emit('submit-guess', { pin, playerName, guess });
-      setSubmittedGuesses(prev => [...prev, { playerName, guess }]);
-      setGuess('');
-      setHasSubmitted(true);
-    }
-  };
-
-  const startGame = () => {
-    console.log('=== Start Game Function Called ===');
-    console.log('Socket state:', socket ? 'exists' : 'null');
-    console.log('Role:', role);
-    console.log('PIN:', pin);
-    
-    if (!socket) {
-      console.error('❌ Cannot start game: Socket not initialized');
-      return;
-    }
-    
-    if (role === 'host') {
-      console.log('✅ Conditions met for starting game:');
-      console.log('- Is host');
-      console.log('- Socket connected:', socket.connected);
-      console.log('- Socket ID:', socket.id);
-      console.log('Emitting start-game event for pin:', pin);
+    // Also add a useEffect to monitor players state changes
+    useEffect(() => {
+      console.log('Players state updated:', players);
+    }, [players]);
+  
+    const handleSubmitGuess = () => {
+      if (!socket || !guess.trim()) return;
       
-      // Add error handling and timeout for the emit
-      try {
-        const timeout = setTimeout(() => {
-          console.error('❌ Start game event timed out after 5 seconds');
-        }, 5000);
-
-        socket.emit('start-game', pin, (response) => {
-          clearTimeout(timeout);
-          console.log('Start game event acknowledgement:', response);
-        });
-
-        // Add an error event listener
-        socket.once('error', (error) => {
-          console.error('❌ Socket error during start-game:', error);
-        });
-      } catch (error) {
-        console.error('❌ Error emitting start-game event:', error);
-      }
-    } else {
-      console.log('❌ Cannot start game: Not a host (role is', role, ')');
-    }
-  };
-
-  // Handle enter key press for submitting guess
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && !hasSubmitted) {
-      handleSubmitGuess();
-    }
-  };
-
-  // Add this function to handle reconnection
-  const connectWithRetry = () => {
-    const maxRetries = 5;
-    let retries = 0;
-
-    const tryConnect = () => {
-      if (retries >= maxRetries) {
-        console.error('Max reconnection attempts reached');
+      socket.emit('submit-guess', { pin, playerName, guess: guess.trim() });
+      setHasSubmitted(true);
+      setGuess('');
+    };
+  
+    const startGame = () => {
+      console.log('=== Start Game Function Called ===');
+      console.log('Socket state:', socket ? 'exists' : 'null');
+      console.log('Role:', role);
+      console.log('PIN:', pin);
+      
+      if (!socket) {
+        console.error('❌ Cannot start game: Socket not initialized');
         return;
       }
-
-      socket.connect();
-      retries++;
+      
+      if (role === 'host') {
+        console.log('✅ Conditions met for starting game:');
+        console.log('- Is host');
+        console.log('- Socket connected:', socket.connected);
+        console.log('- Socket ID:', socket.id);
+        console.log('Emitting start-game event for pin:', pin);
+        
+        // Emit with acknowledgment callback
+        socket.emit('start-game', pin, (response) => {
+          if (response?.success) {
+            console.log('✅ Game started successfully:', response);
+          } else {
+            console.error('❌ Failed to start game:', response?.error || 'No response');
+          }
+        });
+  
+        // Add event listener for game-started
+        socket.on('game-started', (data) => {
+          console.log('Received game-started event:', data);
+          setGameState('playing');
+          setCurrentTopic(data.topic);
+          setTimeLeft(data.timeLeft);
+        });
+      }
     };
+  
+    // Handle enter key press for submitting guess
+    const handleKeyPress = (e) => {
+      if (e.key === 'Enter' && !hasSubmitted) {
+        handleSubmitGuess();
+      }
+    };
+  
+    // Add this function to handle reconnection
+    const connectWithRetry = () => {
+      const maxRetries = 5;
+      let retries = 0;
+  
+      const tryConnect = () => {
+        if (retries >= maxRetries) {
+          console.error('Max reconnection attempts reached');
+          return;
+        }
+  
+        socket.connect();
+        retries++;
+      };
+  
+      // socket.on('connect_error', () => {
+      //   console.log(`Reconnection attempt ${retries + 1}/${maxRetries}`);
+      //   setTimeout(tryConnect, 1000 * retries);
+      // });
+    };
+  
+    // Call this function when initializing your component
+    connectWithRetry();
+  
+    // Add to your useEffect
+    useEffect(() => {
+      if (!socket) return;
 
-    socket.on('connect_error', () => {
-      console.log(`Reconnection attempt ${retries + 1}/${maxRetries}`);
-      setTimeout(tryConnect, 1000 * retries);
-    });
-  };
+      socket.on('round-completed', (results) => {
+        console.log('Round completed:', results);
+        setRoundResults(results);
+        setGameState('round-results');
+      });
 
-  // Call this function when initializing your component
-  connectWithRetry();
+      socket.on('new-round', ({ topic, roundNumber, maxRounds, timeLeft }) => {
+        setCurrentTopic(topic);
+        setRoundNumber(roundNumber);
+        setMaxRounds(maxRounds);
+        setTimeLeft(timeLeft);
+        setHasSubmitted(false);
+        setAllGuesses([]);
+        setRoundResults(null);
+        setGameState('playing');
+      });
 
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-8">
-      {gameState === 'waiting' && (
-        <div className="text-center">
-          <h2 className="text-2xl mb-4">كود الغرفة: {pin}</h2>
-          <div className="mb-4">
-            <h3 className="text-xl mb-2">اللاعبين:</h3>
-            {players.length > 0 ? (
-              <ul className="space-y-2">
-                {players.map((player, index) => (
-                  <li key={index} className="text-lg">
-                    {player} {player === playerName && '(أنت)'}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-gray-500">لا يوجد لاعبين حتى الآن</p>
+      socket.on('game-ended', ({ reason, finalScores }) => {
+        if (reason === 'completed') {
+          setScores(new Map(finalScores.map(({player, score}) => [player, score])));
+          setGameState('game-over');
+        }
+      });
+
+      return () => {
+        socket.off('round-completed');
+        socket.off('new-round');
+        socket.off('game-ended');
+      };
+    }, [socket]);
+  
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-8">
+        {gameState === 'waiting' && (
+          <div className="text-center">
+            <h2 className="text-2xl mb-4">كود الغرفة: {pin}</h2>
+            <div className="mb-4">
+              <h3 className="text-xl mb-2">اللاعبين:</h3>
+              {players.length > 0 ? (
+                <ul className="space-y-2">
+                  {players.map((player, index) => (
+                    <li key={index} className="text-lg flex items-center gap-2">
+                      <span className="text-2xl">
+                        {player.avatar?.display || '👤'}
+                      </span>
+                      <span>
+                        {player.name} {player.name === playerName && '(أنت)'}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-gray-500">لا يوجد لاعبين حتى الآن</p>
+              )}
+            </div>
+            {role === 'host' && players.length > 0 && (
+              <button
+                onClick={startGame}
+                className="rounded-lg bg-white text-black px-6 py-3 hover:bg-gray-100 transition-colors font-semibold border-2 border-black active:transform active:scale-95">
+                ابدأ
+              </button>
             )}
           </div>
-          {role === 'host' && players.length > 0 && (
-            <button
-              onClick={startGame}
-              className="rounded-lg bg-white text-black px-6 py-3 hover:bg-gray-100 transition-colors font-semibold border-2 border-black active:transform active:scale-95">
-              ابدأ
-            </button>
-          )}
-        </div>
-      )}
+        )}
+  
+        {gameState === 'playing' && (
+          <div className="text-center">
+            <div className="mb-4 text-lg text-gray-600">
+              الجولة {roundNumber} من {maxRounds}
+            </div>
 
-      {gameState === 'playing' && (
-        <div className="text-center">
-          <div className="mb-6">
-            <div className="text-6xl font-bold mb-2">{timeLeft}</div>
-            <div className="text-sm text-gray-600">ثواني باقية</div>
+            <div className="mb-6">
+              <div className="text-6xl font-bold mb-2">{timeLeft}</div>
+              <div className="text-sm text-gray-600">ثواني باقية</div>
+            </div>
+            
+            <h2 className="text-2xl mb-4">الموضوع: {currentTopic}</h2>
+            
+            {!hasSubmitted ? (
+              <div>
+                <input
+                  type="text"
+                  value={guess}
+                  onChange={(e) => setGuess(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  className="mb-4 p-3 rounded border"
+                  placeholder="Enter your guess"
+                  autoFocus
+                />
+                <button
+                  onClick={handleSubmitGuess}
+                  className="rounded-full bg-foreground text-background px-6 py-3"
+                >
+                  تقديم التخمين
+                </button>
+              </div>
+            ) : (
+              <div>
+                <div className="text-green-600 text-lg mb-4">
+                  تم تقديم تخمينك! انتظار اللاعبين الآخرين...
+                </div>
+                <div className="mt-4">
+                  <h3 className="text-xl mb-2">التخمينات المقدمة:</h3>
+                  <div className="space-y-2">
+                    {allGuesses.map((g, index) => (
+                      <div key={index} className="p-2 bg-gray-50 rounded flex items-center gap-2">
+                        <span className="text-2xl">
+                          {players.find(p => p.name === g.playerName)?.avatar?.display || '👤'}
+                        </span>
+                        <span className="font-bold">{g.playerName}</span>: {g.guess}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="text-sm text-gray-500 mt-2">
+                    {allGuesses.length} من {totalPlayers} لاعبين قدموا تخميناتهم
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
-          
-          <h2 className="text-2xl mb-4">الموضوع: {currentTopic}</h2>
-          
-          {!hasSubmitted ? (
-            <div>
-              <input
-                type="text"
-                value={guess}
-                onChange={(e) => setGuess(e.target.value)}
-                onKeyPress={handleKeyPress}
-                className="mb-4 p-3 rounded border"
-                placeholder="Enter your guess"
-                autoFocus
-              />
-              <button
-                onClick={handleSubmitGuess}
-                className="rounded-full bg-foreground text-background px-6 py-3"
-              >
-                تقديم التخمين
-              </button>
+        )}
+  
+  
+        {gameState === 'results' && (
+          <div className="text-center">
+            <h2 className="text-2xl mb-4">النتائج</h2>
+               <h2 className="text-2xl mb-4">التخمينات المقدمة</h2>
+                <ul>
+                  {submittedGuesses.map((entry, index) => (
+                    <li key={index}>
+                      {/* formatting issue, names dont mix well with arabic (right to left) text */}
+                      <span className="font-bold">{entry.playerName}</span> guessed: {entry.guess}
+                    </li>
+                  ))}
+                </ul>
+            {/* {results && Object.entries(results).map(([word, count]) => (
+              <div key={word} className="mb-2">
+                <span className="font-bold">{word}</span>: {count} matches
+              </div>
+            ))} */}
+          </div>
+        )}
+  
+        {gameState === 'round-results' && roundResults && (
+          <div className="text-center">
+            <div className="mb-4 text-lg text-gray-600">
+              اكتملت الجولة {roundNumber} من {maxRounds}
             </div>
-          ) : (
-            <div className="text-green-600 text-lg">
-               انتظار اللاعبين الآخرين..
+            <h2 className="text-2xl mb-4">نتائج الجولة</h2>
+            <div className="space-y-4">
+              {roundResults.guessGroups.map(({ guess, players, points }, index) => (
+                <div key={index} className="p-4 bg-gray-50 rounded-lg">
+                  <div className="font-bold text-lg">{guess}</div>
+                  <div className="text-sm text-gray-600">
+                    {players.map(p => p.name).join(', ')} - {points} نقطة
+                  </div>
+                </div>
+              ))}
             </div>
-          )}
-        </div>
-      )}
-
-
-      {gameState === 'results' && (
-        <div className="text-center">
-          <h2 className="text-2xl mb-4">النتائج</h2>
-             <h2 className="text-2xl mb-4">التخمينات المقدمة</h2>
-              <ul>
-                {submittedGuesses.map((entry, index) => (
-                  <li key={index}>
-                    {/* formatting issue, names dont mix well with arabic (right to left) text */}
-                    <span className="font-bold">{entry.playerName}</span> guessed: {entry.guess}
-                  </li>
+            <div className="mt-6">
+              <h3 className="text-xl mb-2">النقاط الحالية:</h3>
+              {roundResults.scores
+                .sort((a, b) => b.score - a.score)
+                .map(({ player, avatar, score }, index) => (
+                  <div key={index} className="text-lg flex items-center justify-center space-x-2 rtl:space-x-reverse">
+                    <span className="text-2xl">{avatar?.display}</span>
+                    <span>{player}: {score} نقطة</span>
+                  </div>
                 ))}
-              </ul>
-          {/* {results && Object.entries(results).map(([word, count]) => (
-            <div key={word} className="mb-2">
-              <span className="font-bold">{word}</span>: {count} matches
             </div>
-          ))} */}
-        </div>
-      )}
-    </div>
-  );
+            {roundNumber < maxRounds && (
+              <div className="mt-4 text-sm text-gray-600">
+                الجولة التالية تبدأ خلال 5 ثوان...
+              </div>
+            )}
+          </div>
+        )}
+  
+        {gameState === 'game-over' && (
+          <div className="text-center">
+            <h2 className="text-3xl mb-6">انتهت اللعبة!</h2>
+            <div className="space-y-4">
+              {Array.from(scores)
+                .sort(([,a], [,b]) => b - a)
+                .map(([playerName, score], index) => (
+                  <div 
+                    key={playerName} 
+                    className={`text-xl flex items-center justify-center space-x-2 rtl:space-x-reverse ${
+                      index === 0 ? 'text-2xl font-bold text-yellow-600' : ''
+                    }`}
+                  >
+                    <span>{index + 1}.</span>
+                    {index === 0 && <span className="text-2xl">🏆</span>}
+                    <span>{playerName}: {score} نقطة</span>
+                  </div>
+                ))}
+            </div>
+            {Array.from(scores).length > 0 && (
+              <div className="mt-8 text-xl">
+                🎉 مبروك {Array.from(scores)[0][0]}! 🎉
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
 } 

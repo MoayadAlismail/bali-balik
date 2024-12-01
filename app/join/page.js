@@ -1,81 +1,70 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import io from 'socket.io-client';
+import { motion } from 'framer-motion';
+import AvatarCustomizer from '@/app/components/AvatarCustomizer';
+import Link from 'next/link';
 
 export default function JoinGame() {
+  const router = useRouter();
   const [pin, setPin] = useState('');
   const [playerName, setPlayerName] = useState('');
-  const [socket, setSocket] = useState(null);
-  const [error, setError] = useState(null);
-  const router = useRouter();
+  const [error, setError] = useState('');
+  const [avatar, setAvatar] = useState({ character: '', accessory: null, display: '👨' });
 
-  useEffect(() => {
-    const newSocket = io(process.env.NEXT_PUBLIC_SOCKET_URL, {
-      withCredentials: true,
-      path: '/socket.io/',
-      transports: ['websocket'],
-      autoConnect: true,
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-      secure: true,
-      rejectUnauthorized: false,
-      extraHeaders: {
-        'Origin': 'https://www.balibalik.com',
+  const validatePin = async (pin) => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/validate-pin/${pin}`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        console.error('Server response not OK:', response.status, response.statusText);
+        throw new Error('Network response was not ok');
       }
-    });
-
-    newSocket.on('connect', () => {
-      console.log('Connected to server');
-    });
-
-    newSocket.on('connect_error', (error) => {
-      console.error('Connection error:', error);
-      setError('خطأ في الاتصال بالخادم');
-    });
-
-    newSocket.on('join-error', (error) => {
-      console.error('Join error:', error);
-      setError(error.message);
-    });
-
-    newSocket.on('join-success', () => {
-      router.push(`/game/${pin}?role=player&name=${encodeURIComponent(playerName)}`);
-    });
-
-    setSocket(newSocket);
-
-    return () => {
-      if (newSocket) newSocket.close();
-    };
-  }, []);
+      const data = await response.json();
+      console.log('PIN validation response:', data);
+      return data.valid;
+    } catch (error) {
+      console.error('Error validating PIN:', error);
+      return false;
+    }
+  };
 
   const handleJoin = async () => {
-    if (!pin.trim() || !playerName.trim() || !socket) return;
-    
-    setError(null);
+    if (!pin.trim() || !playerName.trim()) {
+      setError('Please enter both PIN and name');
+      return;
+    }
 
-    try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_SOCKET_URL}/validate-pin/${pin}`);
-      const data = await response.json();
-      
-      if (!data.valid) {
-        setError('رمز غير صالح');
-        return;
-      }
-
-      socket.emit('join-room', { pin, playerName, role: 'player' });
-      
-    } catch (err) {
-      console.error('Error validating PIN:', err);
-      setError('حدث خطأ أثناء محاولة الانضمام');
+    const isValid = await validatePin(pin);
+    if (isValid) {
+      router.push(`/game/${pin}?role=player&name=${encodeURIComponent(playerName)}&avatar=${encodeURIComponent(JSON.stringify(avatar))}`);
+    } else {
+      setError('Invalid game PIN');
     }
   };
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#FF9A8B] to-[#FF6B6B] p-4">
+      <Link 
+        href="/"
+        className="absolute top-4 left-4 bg-white/90 p-3 rounded-full shadow-lg hover:bg-white transition-colors"
+      >
+        <motion.div
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          className="text-2xl"
+        >
+          ↩️
+        </motion.div>
+      </Link>
+
       <motion.div
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -87,51 +76,65 @@ export default function JoinGame() {
           animate={{ scale: 1 }}
           transition={{ type: "spring", stiffness: 300 }}
         >
-          ادخل رمز اللعبة
+          انضم إلى لعبة
         </motion.h1>
-        
-        <motion.div
-          whileHover={{ scale: 1.02 }}
-          className="relative mb-6"
-        >
-          <input
-            type="text"
-            placeholder="ادخل اسمك"
-            value={playerName}
-            onChange={(e) => setPlayerName(e.target.value)}
-            className="w-full p-4 text-2xl text-center border-3 border-[#FF9A8B] rounded-xl focus:border-[#FF6B6B] outline-black bg-white/50 backdrop-blur-sm transition-all mb-4"
-          />
-          <input
-            type="text"
-            value={pin}
-            onChange={(e) => setPin(e.target.value)}
-            placeholder="ادخل الرمز هنا..."
-            className="w-full p-4 text-2xl text-center border-3 border-[#FF9A8B] rounded-xl focus:border-[#FF6B6B] outline-black bg-white/50 backdrop-blur-sm transition-all"
-            maxLength={6}
-          />
-        </motion.div>
 
-        {error && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-center"
+        <motion.div className="space-y-6">
+          {/* Add Avatar Customizer */}
+          <AvatarCustomizer onSelect={setAvatar} />
+
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-center"
+            >
+              {error}
+            </motion.div>
+          )}
+
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="ادخل رمز الغرفة"
+              value={pin}
+              onChange={(e) => {
+                setPin(e.target.value);
+                setError('');
+              }}
+              className="w-full p-4 text-2xl text-center border-3 border-[#FF9A8B] rounded-xl focus:border-[#FF6B6B] outline-none bg-white/50 backdrop-blur-sm transition-all mb-4"
+            />
+          </div>
+
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="ادخل اسمك"
+              value={playerName}
+              onChange={(e) => {
+                setPlayerName(e.target.value);
+                setError('');
+              }}
+              className="w-full p-4 text-2xl text-center border-3 border-[#FF9A8B] rounded-xl focus:border-[#FF6B6B] outline-none bg-white/50 backdrop-blur-sm transition-all"
+            />
+            {/* Show selected avatar next to name */}
+            <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-2xl">
+              {avatar.display}
+            </div>
+          </div>
+
+          <motion.button
+            whileHover={{ scale: 1.05, backgroundColor: '#FF6B6B' }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleJoin}
+            disabled={!pin.trim() || !playerName.trim()}
+            className={`w-full p-4 bg-[#FF9A8B] text-white rounded-xl text-xl font-bold shadow-lg hover:shadow-xl transition-all duration-300 ${
+              (!pin.trim() || !playerName.trim()) ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
           >
-            {error}
-          </motion.div>
-        )}
-
-        <motion.button
-          whileHover={{ scale: 1.05, backgroundColor: '#FF6B6B' }}
-          whileTap={{ scale: 0.95 }}
-          onClick={handleJoin}
-          disabled={!pin.trim() || !playerName.trim()}
-          className={`w-full p-4 bg-[#FF9A8B] text-white rounded-xl text-xl font-bold shadow-lg hover:shadow-xl transition-all duration-300 ${
-            (!pin.trim() || !playerName.trim()) ? 'opacity-50 cursor-not-allowed' : ''
-          }`}
-        >
-          يلا نلعب! 🎮
-        </motion.button>
+            يلا نلعب 🎮
+          </motion.button>
+        </motion.div>
       </motion.div>
     </div>
   );

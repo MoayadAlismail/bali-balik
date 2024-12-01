@@ -7,13 +7,13 @@ const app = express();
 const httpServer = createServer(app);
 
 // Get allowed origins from environment variable
-const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS 
-  ? process.env.CORS_ALLOWED_ORIGINS.split(',') 
-  : ['http://localhost:3000'];
+const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'];
 
-// CORS configuration
+// CORS configuration for Express
 app.use(cors({
-  origin: allowedOrigins,
+  origin: process.env.NODE_ENV === 'development' 
+    ? 'http://localhost:3000'  // Development frontend URL
+    : allowedOrigins,          // Production URLs
   methods: ['GET', 'POST', 'OPTIONS'],
   credentials: true,
   optionsSuccessStatus: 200
@@ -29,23 +29,44 @@ const topics = [
 // Socket.IO setup
 const io = new Server(httpServer, {
   cors: {
-    origin: allowedOrigins,
+    origin: process.env.NODE_ENV === 'development' 
+      ? 'http://localhost:3000'  // Development frontend URL
+      : allowedOrigins,          // Production URLs
     methods: ["GET", "POST"],
     credentials: true
   },
   transports: ['websocket'],
   pingTimeout: 60000,
   pingInterval: 25000,
-  secure: true,
-  rejectUnauthorized: false,
+  path: '/socket.io/',
   maxHttpBufferSize: 1e8,
 });
 
+// Add this near the top of your file after creating the rooms Map
+const logRooms = () => {
+  console.log('Current rooms:', {
+    count: rooms.size,
+    pins: Array.from(rooms.keys()),
+    details: Array.from(rooms.entries()).map(([pin, room]) => ({
+      pin,
+      players: room.players,
+      host: room.host,
+      state: room.state
+    }))
+  });
+};
+
 // Socket connection handling
 io.on('connection', (socket) => {
-  console.log(`Socket connected: ${socket.id}`);
+  console.log(`New socket connection: ${socket.id}`);
+  console.log(`Transport: ${socket.conn.transport.name}`);
+  
+  socket.on('disconnect', (reason) => {
+    console.log(`Socket ${socket.id} disconnected:`, reason);
+  });
 
-  socket.on('create-game', () => {
+  socket.on('create-game', ({ roundCount = 5, roundTime = 60 }) => {
+    console.log('Create game request received');
     const pin = Math.floor(100000 + Math.random() * 900000).toString();
     socket.join(pin);
     
@@ -56,25 +77,26 @@ io.on('connection', (socket) => {
       state: 'waiting',
       topic: null,
       guesses: new Map(),
-      hostName: null
+      hostName: null,
+      submittedGuesses: [],
+      scores: new Map(),
+      currentRound: 0,
+      maxRounds: roundCount,
+      roundTime: roundTime,
+      timer: null
     });
     
+    console.log(`Creating game with pin: ${pin}, rounds: ${roundCount}, time per round: ${roundTime}s`);
+    logRooms();
     socket.emit('game-created', pin);
     console.log(`Game created with pin: ${pin}`);
   });
 
-  socket.on('join-room', ({ pin, playerName, role }) => {
+  socket.on('join-room', ({ pin, playerName, role, avatar }) => {
     const room = rooms.get(pin);
     if (!room) {
       console.log(`Rejected join attempt for invalid PIN: ${pin}`);
       socket.emit('join-error', { message: 'غرفة غير موجودة' });
-      return;
-    }
-
-    // Check if game is already in progress
-    if (room.state !== 'waiting') {
-      console.log(`Rejected join attempt for room ${pin}: game already in progress`);
-      socket.emit('join-error', { message: 'اللعبة قد بدأت بالفعل' });
       return;
     }
 
@@ -83,10 +105,20 @@ io.on('connection', (socket) => {
     if (role === 'host') {
       room.host = socket.id;
       room.hostName = playerName;
+      console.log(`Host ${playerName} joined/rejoined room ${pin}`);
     }
     
-    if (!room.players.includes(playerName)) {
-      room.players.push(playerName);
+    // Update or add player with avatar
+    const existingPlayerIndex = room.players.findIndex(p => p.name === playerName);
+    if (existingPlayerIndex === -1) {
+      room.players.push({
+        name: playerName,
+        avatar: avatar || { character: '', display: '👤' },
+        score: 0
+      });
+    } else {
+      // Update existing player's avatar if they rejoin
+      room.players[existingPlayerIndex].avatar = avatar || room.players[existingPlayerIndex].avatar;
     }
 
     socket.data.playerName = playerName;
@@ -115,41 +147,70 @@ io.on('connection', (socket) => {
     console.log(`Player ${playerName} joined room ${pin} with players:`, room.players);
   });
 
-  socket.on('start-game', (pin) => {
-    const room = rooms.get(pin);
-    if (!room || room.host !== socket.id) return;
-
-    const topic = topics[Math.floor(Math.random() * topics.length)];
-    room.topic = topic;
-    room.state = 'playing';
-    room.guesses.clear();
+  socket.on('start-game', (pin, callback) => {
+    console.log(`Start game request received for pin: ${pin}`);
     
-    io.to(pin).emit('game-started', { 
-      topic,
-      timeLeft: 60,
-      players: room.players
-    });
-
-    let timeLeft = 60;
-    const timer = setInterval(() => {
-      timeLeft--;
-      
-      if (timeLeft <= 0) {
-        clearInterval(timer);
-        endGame(pin);
-      } else {
-        io.to(pin).emit('timer-update', timeLeft);
+    try {
+      const room = rooms.get(pin);
+      if (!room) {
+        console.log(`Room ${pin} not found`);
+        callback?.({ success: false, error: 'Room not found' });
+        return;
       }
-    }, 1000);
 
-    room.timer = timer;
-    console.log(`Game started in room ${pin} with topic: ${topic}`);
+      if (room.host !== socket.id) {
+        console.log(`Unauthorized start attempt from ${socket.id}`);
+        callback?.({ success: false, error: 'Not authorized to start game' });
+        return;
+      }
+
+      const topic = topics[Math.floor(Math.random() * topics.length)];
+      room.topic = topic;
+      room.state = 'playing';
+      room.guesses.clear();
+      room.currentRound = 0;
+      
+      // Clear any existing timer
+      if (room.timer) {
+        clearInterval(room.timer);
+        room.timer = null;
+      }
+
+      // Start new timer for first round
+      let timeLeft = room.roundTime;
+      room.timer = setInterval(() => {
+        timeLeft--;
+        
+        if (timeLeft <= 0) {
+          clearInterval(room.timer);
+          room.timer = null;
+          calculateAndEmitScores(room);
+        } else {
+          io.to(room.pin).emit('timer-update', timeLeft);
+        }
+      }, 1000);
+
+      io.to(room.pin).emit('game-started', { 
+        topic,
+        timeLeft: room.roundTime,
+        players: room.players
+      });
+      
+      callback?.({ success: true });
+      
+    } catch (error) {
+      console.error('Error starting game:', error);
+      callback?.({ success: false, error: error.message });
+    }
   });
 
   socket.on('disconnect', () => {
     for (const [pin, room] of rooms.entries()) {
       if (room.host === socket.id) {
-        if (room.timer) clearInterval(room.timer);
+        if (room.timer) {
+          clearInterval(room.timer);
+          room.timer = null;
+        }
         io.to(pin).emit('game-ended', { reason: 'host-disconnected' });
         rooms.delete(pin);
         console.log(`Host disconnected, room ${pin} closed`);
@@ -163,6 +224,30 @@ io.on('connection', (socket) => {
       }
     }
   });
+
+  socket.on('submit-guess', ({ pin, playerName, guess }) => {
+    const room = rooms.get(pin);
+    if (!room) return;
+
+    // Store the guess
+    const newGuess = { playerName, guess: guess.trim().toLowerCase(), timestamp: Date.now() };
+    room.submittedGuesses.push(newGuess);
+    
+    // Check if all players have submitted
+    const allPlayersSubmitted = room.submittedGuesses.length === room.players.length;
+    
+    // Emit the updated guesses to all players
+    io.to(pin).emit('guesses-updated', {
+      guesses: room.submittedGuesses,
+      totalPlayers: room.players.length,
+      allSubmitted: allPlayersSubmitted
+    });
+
+    // If all players have submitted, calculate scores and start next round
+    if (allPlayersSubmitted) {
+      calculateAndEmitScores(room);
+    }
+  });
 });
 
 // Health check endpoint
@@ -173,13 +258,155 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Add this near your other endpoints
+// Add this before your routes
+app.options('*', cors()); // Enable preflight for all routes
+
+// Add specific CORS headers to the validate-pin endpoint
 app.get('/validate-pin/:pin', (req, res) => {
+  // Add CORS headers explicitly for this endpoint
+  res.header('Access-Control-Allow-Origin', process.env.NODE_ENV === 'development' 
+    ? 'http://localhost:3000' 
+    : allowedOrigins[0]
+  );
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
   const pin = req.params.pin;
   const roomExists = rooms.has(pin);
   console.log(`PIN validation request for ${pin}: ${roomExists ? 'valid' : 'invalid'}`);
   res.json({ valid: roomExists });
 });
+
+// Add function to calculate scores
+const calculateAndEmitScores = (room) => {
+  if (room.state === 'ended') return;
+
+  // Group guesses by the actual guess text
+  const guessGroups = new Map();
+  room.submittedGuesses.forEach(({ playerName, guess }) => {
+    if (!guessGroups.has(guess)) {
+      guessGroups.set(guess, []);
+    }
+    guessGroups.get(guess).push(playerName);
+  });
+
+  // Calculate scores for this round
+  guessGroups.forEach((players, guess) => {
+    const points = players.length * 100;
+    players.forEach(playerName => {
+      const player = room.players.find(p => p.name === playerName);
+      if (player) {
+        player.score = (player.score || 0) + points;
+      }
+    });
+  });
+
+  // Prepare round results
+  const roundResults = {
+    guessGroups: Array.from(guessGroups).map(([guess, players]) => ({
+      guess,
+      players: players.map(name => {
+        const player = room.players.find(p => p.name === name);
+        return {
+          name,
+          avatar: player?.avatar,
+          score: player?.score || 0
+        };
+      }),
+      points: players.length * 100
+    })),
+    scores: room.players.map(player => ({
+      player: player.name,
+      avatar: player.avatar,
+      score: player.score || 0
+    }))
+  };
+
+  // Emit round results
+  io.to(room.pin).emit('round-completed', roundResults);
+
+  // Clear submitted guesses for next round
+  room.submittedGuesses = [];
+  
+  // Start next round after a delay only if game hasn't ended
+  if (room.state !== 'ended') {
+    setTimeout(() => {
+      startNextRound(room);
+    }, 5000);
+  }
+};
+
+// Add function to start next round
+const startNextRound = (room) => {
+  room.currentRound++;
+  
+  if (room.currentRound >= room.maxRounds) {
+    // Game is over
+    if (room.timer) {
+      clearInterval(room.timer);
+      room.timer = null;
+    }
+    
+    const finalScores = room.players.map(player => ({
+      player: player.name,
+      avatar: player.avatar,
+      score: player.score || 0
+    })).sort((a, b) => b.score - a.score);
+
+    io.to(room.pin).emit('game-ended', { 
+      reason: 'completed',
+      finalScores 
+    });
+
+    // Clean up the room state
+    room.state = 'ended';
+    room.submittedGuesses = [];
+    room.currentRound = 0;
+    
+    // Stop any further round processing
+    return;
+  }
+
+  // Only continue if the game hasn't ended
+  if (room.state !== 'ended') {
+    // Clear any existing timer
+    if (room.timer) {
+      clearInterval(room.timer);
+      room.timer = null;
+    }
+
+    // Start new round
+    const topic = topics[Math.floor(Math.random() * topics.length)];
+    room.topic = topic;
+    room.submittedGuesses = [];
+
+    // Start new timer for this round
+    let timeLeft = room.roundTime;
+    room.timer = setInterval(() => {
+      if (room.state === 'ended') {
+        clearInterval(room.timer);
+        room.timer = null;
+        return;
+      }
+
+      timeLeft--;
+      
+      if (timeLeft <= 0) {
+        clearInterval(room.timer);
+        room.timer = null;
+        calculateAndEmitScores(room);
+      } else {
+        io.to(room.pin).emit('timer-update', timeLeft);
+      }
+    }, 1000);
+
+    io.to(room.pin).emit('new-round', {
+      topic,
+      roundNumber: room.currentRound + 1,
+      maxRounds: room.maxRounds,
+      timeLeft: room.roundTime
+    });
+  }
+};
 
 // Start server
 const PORT = process.env.PORT || 3001;

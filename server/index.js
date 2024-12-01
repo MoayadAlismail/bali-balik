@@ -12,10 +12,11 @@ const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS?.split(',') || ['http://
 // CORS configuration for Express
 app.use(cors({
   origin: process.env.NODE_ENV === 'development' 
-    ? 'http://localhost:3000'  // Development frontend URL
-    : allowedOrigins,          // Production URLs
+    ? 'http://localhost:3000'
+    : allowedOrigins,
   methods: ['GET', 'POST', 'OPTIONS'],
   credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization'],
   optionsSuccessStatus: 200
 }));
 
@@ -30,16 +31,20 @@ const topics = [
 const io = new Server(httpServer, {
   cors: {
     origin: process.env.NODE_ENV === 'development' 
-      ? 'http://localhost:3000'  // Development frontend URL
-      : allowedOrigins,          // Production URLs
+      ? 'http://localhost:3000'
+      : allowedOrigins,
     methods: ["GET", "POST"],
-    credentials: true
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization']
   },
-  transports: ['websocket'],
-  pingTimeout: 60000,
-  pingInterval: 25000,
-  path: '/socket.io/',
+  connectTimeout: 45000,  // Increase connection timeout
+  pingTimeout: 30000,     // How long to wait for ping response
+  pingInterval: 3000,     // How often to ping
+  transports: ['websocket', 'polling'],  // Enable both transports
+  allowUpgrades: true,
+  upgradeTimeout: 10000,
   maxHttpBufferSize: 1e8,
+  path: '/socket.io/'
 });
 
 // Add this near the top of your file after creating the rooms Map
@@ -63,6 +68,10 @@ io.on('connection', (socket) => {
   
   socket.on('disconnect', (reason) => {
     console.log(`Socket ${socket.id} disconnected:`, reason);
+  });
+
+  socket.on('connect_error', (error) => {
+    console.error('Socket connection error:', error);
   });
 
   socket.on('create-game', ({ roundCount = 5, roundTime = 60 }) => {
@@ -407,6 +416,14 @@ const startNextRound = (room) => {
     });
   }
 };
+
+// Add security headers middleware
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  next();
+});
 
 // Start server
 const PORT = process.env.PORT || 3001;

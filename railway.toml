@@ -1,0 +1,10 @@
+[build]
+builder = "DOCKERFILE"
+
+[[services]]
+internal_port = 3001
+protocol = "tcp"
+
+[[services.ports]]
+handlers = ["http", "websocket"]
+port = "80" 

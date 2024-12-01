@@ -42,7 +42,8 @@ const io = new Server(httpServer, {
   pingTimeout: 60000,
   pingInterval: 25000,
   secure: true,
-  rejectUnauthorized: true
+  rejectUnauthorized: false,
+  maxHttpBufferSize: 1e8,
 });
 
 // Socket connection handling

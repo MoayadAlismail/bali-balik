@@ -35,6 +35,8 @@ export default function GameRoom({ params }) {
   const [maxRounds, setMaxRounds] = useState(5);
   const [roundResults, setRoundResults] = useState(null);
   const confettiRef = useRef(null);
+  const [gameEnd, setGameEnd] = useState(false);
+
 
   // Near the top of the component, parse the avatar from URL
   const avatarParam = searchParams.get('avatar');
@@ -218,8 +220,6 @@ export default function GameRoom({ params }) {
         setGameState('playing');
       });
       
-      const [gameEnd, setGameEnd] = useState(false);
-
       socket.on('game-ended', ({ reason, finalScores }) => {
         if (reason === 'completed') {
           setScores(new Map(finalScores.map(({player, score}) => [player, score])));
@@ -232,7 +232,7 @@ export default function GameRoom({ params }) {
       if (!confettiTriggered) {
         setConfettiTriggered(true); // Prevent future triggers
         setTimeout(triggerWinnerConfetti, 500); }
-        
+
       return () => {
         socket.off('round-completed');
         socket.off('new-round');

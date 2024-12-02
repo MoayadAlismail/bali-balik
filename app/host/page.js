@@ -142,7 +142,7 @@ export default function HostGame() {
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
-                  onClick={() => adjustRoundTime(-3)}
+                  onClick={() => adjustRoundTime(-5)}
                   className="w-10 h-10 rounded-full bg-[#FF9A8B] text-white flex items-center justify-center text-xl"
                 >
                   -

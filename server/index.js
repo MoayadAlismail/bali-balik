@@ -7,12 +7,12 @@ const app = express();
 const httpServer = createServer(app);
 
 // Get allowed origins from environment variable
-const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'];
+const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS?.split(',') || ['https://balibalik.up.railway.app'];
 
 // CORS configuration for Express
 app.use(cors({
   origin: process.env.NODE_ENV === 'development' 
-    ? 'http://localhost:3000'
+    ? 'https://balibalik.up.railway.app'
     : allowedOrigins,
   methods: ['GET', 'POST', 'OPTIONS'],
   credentials: true,
@@ -31,7 +31,7 @@ const topics = [
 const io = new Server(httpServer, {
   cors: {
     origin: process.env.NODE_ENV === 'development' 
-      ? 'http://localhost:3000'
+      ? 'https://balibalik.up.railway.app'
       : allowedOrigins,
     methods: ["GET", "POST"],
     credentials: true,
@@ -274,7 +274,7 @@ app.options('*', cors()); // Enable preflight for all routes
 app.get('/validate-pin/:pin', (req, res) => {
   // Add CORS headers explicitly for this endpoint
   res.header('Access-Control-Allow-Origin', process.env.NODE_ENV === 'development' 
-    ? 'http://localhost:3000' 
+    ? 'https://balibalik.up.railway.app' 
     : allowedOrigins[0]
   );
   res.header('Access-Control-Allow-Credentials', 'true');

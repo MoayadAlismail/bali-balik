@@ -426,8 +426,10 @@ app.use((req, res, next) => {
 });
 
 // Start server
-const PORT = process.env.PORT || 8080;
-httpServer.listen(PORT, '0.0.0.0', () => {
+const port = process.env.PORT || 3000;
+
+// Listen on `port` and 0.0.0.0
+app.listen(port, "0.0.0.0", function () {
   console.log('==================================');
   console.log(`Server running on port ${PORT}`);
   console.log(`Allowed Origins: ${allowedOrigins.join(', ')}`);

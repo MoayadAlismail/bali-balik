@@ -5,8 +5,8 @@ import { motion } from 'framer-motion';
 const AvatarCustomizer = ({ onSelect }) => {
   // Customization options
   const skinColors = ['🏻', '🏼', '🏽', '🏾', '🏿'];
-  const accessories = ['🎩', '👑', '🎀', '🧢', '👓', '🕶️', '🪖', '🎭'];
-  const baseCharacters = ['👶', '👧', '👦', '👩', '👨', '🧑'];
+  //const accessories = ['🎩', '👑', '🎀', '🧢', '👓', '🕶️', '🪖', '🎭'];
+  const baseCharacters = ['🎩', '👑', '🎀', '🧢', '👓', '🕶️', '🪖', '🎭'];
   
   const [selectedCharacter, setSelectedCharacter] = useState(baseCharacters[0]);
   const [selectedAccessory, setSelectedAccessory] = useState(null);
@@ -59,7 +59,7 @@ const AvatarCustomizer = ({ onSelect }) => {
         </div>
       </div>
 
-      {/* Accessories Selection */}
+      {/* Accessories Selection
       <div>
         <h4 className="text-sm font-semibold mb-2">الإكسسوارات</h4>
         <div className="grid grid-cols-4 gap-2">
@@ -93,7 +93,7 @@ const AvatarCustomizer = ({ onSelect }) => {
             </motion.button>
           ))}
         </div>
-      </div>
+      </div> */}
     </div>
   );
 };

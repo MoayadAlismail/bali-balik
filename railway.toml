@@ -2,7 +2,7 @@
 builder = "DOCKERFILE"
 
 [[services]]
-internal_port = 3001
+internal_port = 3000
 protocol = "tcp"
 
 [[services.ports]]

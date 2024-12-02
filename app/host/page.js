@@ -37,7 +37,6 @@ export default function HostGame() {
 
   const handleStartHosting = () => {
     if (playerName.trim() && gamePin) {
-      io.emit('game-created', pin);
       router.push(`/game/${gamePin}?role=host&name=${encodeURIComponent(playerName)}&avatar=${encodeURIComponent(JSON.stringify(avatar))}`);
     }
   };

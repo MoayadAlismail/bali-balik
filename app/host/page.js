@@ -16,7 +16,7 @@ export default function HostGame() {
   const [gamePin, setGamePin] = useState('');
   const [roundCount, setRoundCount] = useState(5);
   const [roundTime, setRoundTime] = useState(10);
-  const [avatar, setAvatar] = useState({ character: '👨', accessory: null, display: '👨' });
+  const [avatar, setAvatar] = useState({ character: '👑', accessory: null, display: '👑' });
 
   const playClickSound = () => {
     new Audio(buttonSFX).play();

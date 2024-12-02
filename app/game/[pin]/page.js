@@ -225,13 +225,17 @@ export default function GameRoom({ params }) {
           setScores(new Map(finalScores.map(({player, score}) => [player, score])));
           setGameState('game-over');
           // Trigger confetti after a short delay
+          console.log("hello we are in socket.on");
   
         }
       });
 
       if (!confettiTriggered) {
         setConfettiTriggered(true); // Prevent future triggers
-        setTimeout(triggerWinnerConfetti, 500); }
+        console.log("we are in if statement");
+
+        setTimeout(triggerWinnerConfetti, 500); 
+      }
 
       return () => {
         socket.off('round-completed');

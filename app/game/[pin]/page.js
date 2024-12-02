@@ -217,18 +217,22 @@ export default function GameRoom({ params }) {
         setRoundResults(null);
         setGameState('playing');
       });
-      gameEnd = false;
+      
+      const [gameEnd, setGameEnd] = useState(false);
+
       socket.on('game-ended', ({ reason, finalScores }) => {
         if (reason === 'completed') {
-          gameEnd=true;
           setScores(new Map(finalScores.map(({player, score}) => [player, score])));
           setGameState('game-over');
           // Trigger confetti after a short delay
+  
         }
       });
-      if (gameEnd == true) {
-        setTimeout(triggerWinnerConfetti, 500);
-      }
+
+      if (!confettiTriggered) {
+        setConfettiTriggered(true); // Prevent future triggers
+        setTimeout(triggerWinnerConfetti, 500); }
+        
       return () => {
         socket.off('round-completed');
         socket.off('new-round');

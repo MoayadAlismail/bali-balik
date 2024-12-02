@@ -82,7 +82,7 @@ app.prepare().then(() => {
 
     socket.on('create-game', ({ roundCount = 5, roundTime = 60 }) => {
       console.log('Create game request received');
-      const pin = Math.floor(100000 + Math.random() * 900000).toString();
+      const pin = Math.floor(1000 + Math.random() * 9000).toString();
       socket.join(pin);
       
       rooms.set(pin, {

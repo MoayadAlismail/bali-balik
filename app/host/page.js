@@ -174,12 +174,12 @@ export default function HostGame() {
             </div>
           </div>
 
-          {gamePin && (
+          {/* {gamePin && (
             <div className="text-center mb-4">
               <p className="text-lg text-gray-600 mb-2">رمز اللعبة:</p>
               <p className="text-4xl font-bold text-[#FF6B6B]">{gamePin}</p>
             </div>
-          )}
+          )} */}
 
           <motion.button
             whileHover={{ scale: 1.05, backgroundColor: '#FF6B6B' }}

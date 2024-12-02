@@ -24,8 +24,8 @@
     "next": "^14.0.0",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
-    "socket.io": "^4.7.0",
-    "socket.io-client": "^4.7.0",
+    "socket.io": "^1.7.0",
+    "socket.io-client": "^1.7.0",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
     "zustand": "^4.5.5"

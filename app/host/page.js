@@ -71,7 +71,7 @@ export default function HostGame() {
     setRoundTime(prev => {
       playClickSound();
       const newValue = prev + increment;
-      return Math.min(Math.max(4, newValue), 120); // Min 10, Max 120 seconds
+      return Math.min(Math.max(5, newValue), 120); // Min 10, Max 120 seconds
     });
   };
 
@@ -151,7 +151,7 @@ export default function HostGame() {
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
-                  onClick={() => adjustRoundTime(3)}
+                  onClick={() => adjustRoundTime(5)}
                   className="w-10 h-10 rounded-full bg-[#FF9A8B] text-white flex items-center justify-center text-xl"
                 >
                   +

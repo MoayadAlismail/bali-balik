@@ -6,6 +6,11 @@ import { Confetti } from '@/app/components/ui/confetti';
 const buttonSFX = "/assets/buttonClick.mp3";
 const errorSFX = "/assets/errorSFX.mp3"
 const joinSFX = "/assets/joinSound.mp3"
+const gameStartSFX = "/assets/gameStart.mp3"
+const tickSFX = "/assets/clockTick.mp3"
+const roundCompleteSFX = "/assets/roundComplete.mp3"
+
+
 
 export default function GameRoom({ params }) {
   const searchParams = useSearchParams();
@@ -35,6 +40,33 @@ export default function GameRoom({ params }) {
   const avatarParam = searchParams.get('avatar');
   const playerAvatar = avatarParam ? JSON.parse(decodeURIComponent(avatarParam)) : null;
 
+  //Initilazing sound functions
+  const playClickSound = () => {
+    new Audio(buttonSFX).play();
+    return;
+  }
+  const playErrorSound = () => {
+    new Audio(errorSFX).play();
+    return;
+  }
+  const playJoinSound = () => {
+    new Audio(joinSFX).play();
+    return;
+  }
+  const playGameStartSound = () => {
+    new Audio(gameStartSFX).play();
+    return;
+  }
+  const playClockTick = () => {
+    new Audio(tickSFX).play();
+    return;
+  }
+
+  const playRoundComplete = () => {
+    new Audio(roundCompleteSFX).play();
+    return;
+  }
+
   // Join room when component mounts
   useEffect(() => {
     if (!socket || !pin || !playerName || !role) return;
@@ -44,6 +76,7 @@ export default function GameRoom({ params }) {
 
     // Set up event listeners
     socket.on('player-joined', (data) => {
+      playJoinSound();
       console.log('Player joined event received:', data);
       if (data && Array.isArray(data.players)) {
         setPlayers(data.players);
@@ -51,6 +84,7 @@ export default function GameRoom({ params }) {
     });
 
     socket.on('game-started', (data) => {
+      playGameStartSound();
       console.log('Game started with topic:', data.topic);
       setGameState('playing');
       setCurrentTopic(data.topic);
@@ -59,10 +93,12 @@ export default function GameRoom({ params }) {
     });
 
     socket.on('timer-update', (time) => {
+      playClockTick();
       setTimeLeft(time);
     });
 
     socket.on('guesses-updated', ({ guesses, totalPlayers }) => {
+      playClickSound();
       console.log('Received updated guesses:', guesses);
       setAllGuesses(guesses);
       setTotalPlayers(totalPlayers);
@@ -84,7 +120,7 @@ export default function GameRoom({ params }) {
   
     const handleSubmitGuess = () => {
       if (!socket || !guess.trim()) return;
-      
+      playClickSound();
       socket.emit('submit-guess', { pin, playerName, guess: guess.trim() });
       setHasSubmitted(true);
       setGuess('');
@@ -97,6 +133,7 @@ export default function GameRoom({ params }) {
       console.log('PIN:', pin);
       
       if (!socket) {
+        playErrorSound();
         console.error('❌ Cannot start game: Socket not initialized');
         return;
       }
@@ -113,12 +150,14 @@ export default function GameRoom({ params }) {
           if (response?.success) {
             console.log('✅ Game started successfully:', response);
           } else {
+            playErrorSound();
             console.error('❌ Failed to start game:', response?.error || 'No response');
           }
         });
   
         // Add event listener for game-started
         socket.on('game-started', (data) => {
+          playGameStartSound();
           console.log('Received game-started event:', data);
           setGameState('playing');
           setCurrentTopic(data.topic);
@@ -163,6 +202,7 @@ export default function GameRoom({ params }) {
       if (!socket) return;
 
       socket.on('round-completed', (results) => {
+        playRoundComplete();
         console.log('Round completed:', results);
         setRoundResults(results);
         setGameState('round-results');

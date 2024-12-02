@@ -3,6 +3,9 @@ import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { getSocket } from '@/utils/socket';
 import { Confetti } from '@/app/components/ui/confetti';
+const buttonSFX = "/assets/buttonClick.mp3";
+const errorSFX = "/assets/errorSFX.mp3"
+const joinSFX = "/assets/joinSound.mp3"
 
 export default function GameRoom({ params }) {
   const searchParams = useSearchParams();

@@ -4,9 +4,9 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import AvatarCustomizer from '@/app/components/AvatarCustomizer';
 import Link from 'next/link';
-import buttonSFX from "./assets/buttonClick.wav"
-import errorSFX from "./assets/errorSFX.mp3"
-import joinSFX from "./assets/joinSound.mp3"
+const buttonSFX = "/assets/buttonClick.mp3";
+const errorSFX = "/assets/errorSFX.mp3"
+const joinSFX = "/assets/joinSound.mp3"
 
 
 
@@ -16,6 +16,9 @@ export default function JoinGame() {
   const [playerName, setPlayerName] = useState('');
   const [error, setError] = useState('');
   const [avatar, setAvatar] = useState({ character: '', accessory: null, display: '👨' });
+
+
+  
    //defining the sound variables
    const playClickSound = () => {
     new Audio(buttonSFX).play();

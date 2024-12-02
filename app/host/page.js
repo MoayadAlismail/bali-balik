@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation';
 import { getSocket } from '@/utils/socket';
 import AvatarCustomizer from '@/app/components/AvatarCustomizer';
 import Link from 'next/link';
-import buttonSFX from "./assets/buttonClick.wav"
-import errorSFX from "./assets/errorSFX.mp3"
-import joinSFX from "./assets/joinSound.mp3"
+const buttonSFX = "/assets/buttonClick.mp3";
+const errorSFX = "/assets/errorSFX.mp3"
+const joinSFX = "/assets/joinSound.mp3"
 
 export default function HostGame() {
   const router = useRouter();

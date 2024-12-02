@@ -29,10 +29,10 @@ export default function HostGame() {
       setGamePin(pin);
     });
 
-    // return () => {
-    //   console.log("socket.off(game-created) called")
-    //   socket.off('game-created');
-    // };
+    return () => {
+      console.log("socket.off(game-created) called")
+      socket.off('game-created');
+    };
   }, [socket, roundCount, roundTime]);
 
   const handleStartHosting = () => {

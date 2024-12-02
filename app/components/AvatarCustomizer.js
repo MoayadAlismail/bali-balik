@@ -6,7 +6,7 @@ const AvatarCustomizer = ({ onSelect }) => {
   // Customization options
   const skinColors = ['🏻', '🏼', '🏽', '🏾', '🏿'];
   //const accessories = ['🎩', '👑', '🎀', '🧢', '👓', '🕶️', '🪖', '🎭'];
-  const baseCharacters = ['🎩', '👑', '🎀', '🧢', '👓', '🕶️', '🪖', '🎭'];
+  const baseCharacters = ['🎩', '👑', '🎀', '⚽', '👓', '🕶️', '🪖', '🎭', '🌺'];
   
   const [selectedCharacter, setSelectedCharacter] = useState(baseCharacters[0]);
   const [selectedAccessory, setSelectedAccessory] = useState(null);

@@ -4,6 +4,11 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import AvatarCustomizer from '@/app/components/AvatarCustomizer';
 import Link from 'next/link';
+import buttonSFX from "./assets/buttonClick.wav"
+import errorSFX from "./assets/errorSFX.mp3"
+import joinSFX from "./assets/joinSound.mp3"
+
+
 
 export default function JoinGame() {
   const router = useRouter();
@@ -11,6 +16,19 @@ export default function JoinGame() {
   const [playerName, setPlayerName] = useState('');
   const [error, setError] = useState('');
   const [avatar, setAvatar] = useState({ character: '', accessory: null, display: '👨' });
+   //defining the sound variables
+   const playClickSound = () => {
+    new Audio(buttonSFX).play();
+    return;
+  }
+  const playErrorSound = () => {
+    new Audio(errorSFX).play();
+    return;
+  }
+  const playJoinSound = () => {
+    new Audio(joinSFX).play();
+    return;
+  }
 
   const validatePin = async (pin) => {
     try {
@@ -36,16 +54,20 @@ export default function JoinGame() {
     }
   };
 
+
   const handleJoin = async () => {
     if (!pin.trim() || !playerName.trim()) {
+      playErrorSound();
       setError('Please enter both PIN and name');
       return;
     }
 
     const isValid = await validatePin(pin);
     if (isValid) {
+      playJoinSound();
       router.push(`/game/${pin}?role=player&name=${encodeURIComponent(playerName)}&avatar=${encodeURIComponent(JSON.stringify(avatar))}`);
     } else {
+      playErrorSound();
       setError('Invalid game PIN');
     }
   };
@@ -60,6 +82,7 @@ export default function JoinGame() {
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           className="text-2xl"
+          onClick={playClickSound}
         >
           ↩️
         </motion.div>

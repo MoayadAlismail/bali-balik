@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation';
 import { getSocket } from '@/utils/socket';
 import AvatarCustomizer from '@/app/components/AvatarCustomizer';
 import Link from 'next/link';
+import buttonSFX from "./assets/buttonClick.wav"
+import errorSFX from "./assets/errorSFX.mp3"
+import joinSFX from "./assets/joinSound.mp3"
 
 export default function HostGame() {
   const router = useRouter();
@@ -15,6 +18,19 @@ export default function HostGame() {
   const [roundTime, setRoundTime] = useState(10);
   const [avatar, setAvatar] = useState({ character: '👨', accessory: null, display: '👨' });
 
+  const playClickSound = () => {
+    new Audio(buttonSFX).play();
+    return;
+  }
+  const playErrorSound = () => {
+    new Audio(errorSFX).play();
+    return;
+  }
+  const playJoinSound = () => {
+    new Audio(joinSFX).play();
+    return;
+  }
+
   useEffect(() => {
     if (!socket) {
       console.log("!socket called")
@@ -24,6 +40,7 @@ export default function HostGame() {
     console.log('Socket connected, creating game...');
     socket.emit('create-game', { roundCount, roundTime });
 
+    
     socket.on('game-created', (pin) => {
       console.log('Game created with pin:', pin);
       setGamePin(pin);
@@ -37,12 +54,14 @@ export default function HostGame() {
 
   const handleStartHosting = () => {
     if (playerName.trim() && gamePin) {
+      playJoinSound();
       router.push(`/game/${gamePin}?role=host&name=${encodeURIComponent(playerName)}&avatar=${encodeURIComponent(JSON.stringify(avatar))}`);
     }
   };
 
   const adjustRoundCount = (increment) => {
     setRoundCount(prev => {
+      playClickSound();
       const newValue = prev + increment;
       return Math.min(Math.max(1, newValue), 10); // Min 1, Max 10 rounds
     });
@@ -50,6 +69,7 @@ export default function HostGame() {
 
   const adjustRoundTime = (increment) => {
     setRoundTime(prev => {
+      playClickSound();
       const newValue = prev + increment;
       return Math.min(Math.max(4, newValue), 120); // Min 10, Max 120 seconds
     });
@@ -65,6 +85,7 @@ export default function HostGame() {
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           className="text-2xl"
+          onClick={playClickSound}
         >
           ↩️
         </motion.div>

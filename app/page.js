@@ -2,9 +2,12 @@
 import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import buttonSFX from "./assets/buttonClick.wav"
 
 export default function Home() {
   const router = useRouter()
+   //defining the sound variables
+   clickSound = new Audio(buttonSFX);
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -26,10 +29,13 @@ export default function Home() {
 
   const handleHostClick = () => {
     router.push('/host')
+    clickSound.play();
   }
 
   const handleJoinClick = () => {
     router.push('/join')
+    new Audio(buttonClick).play();
+    clickSound.play();
   }
 
   return (

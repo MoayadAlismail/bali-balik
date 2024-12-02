@@ -16,7 +16,10 @@ export default function HostGame() {
   const [avatar, setAvatar] = useState({ character: '👨', accessory: null, display: '👨' });
 
   useEffect(() => {
-    if (!socket) return;
+    if (!socket) {
+      console.log("!socket called")
+      return;
+    }
 
     console.log('Socket connected, creating game...');
     socket.emit('create-game', { roundCount, roundTime });
@@ -27,6 +30,7 @@ export default function HostGame() {
     });
 
     return () => {
+      console.log("socket.off(game-created) called")
       socket.off('game-created');
     };
   }, [socket, roundCount, roundTime]);

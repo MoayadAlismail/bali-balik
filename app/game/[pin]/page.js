@@ -35,7 +35,7 @@ export default function GameRoom({ params }) {
   const [maxRounds, setMaxRounds] = useState(5);
   const [roundResults, setRoundResults] = useState(null);
   const confettiRef = useRef(null);
-  const [gameEnd, setGameEnd] = useState(false);
+  const [confettiTriggered, setConfettiTriggered] = useState(false);
 
 
   // Near the top of the component, parse the avatar from URL

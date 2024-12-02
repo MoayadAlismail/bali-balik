@@ -44,7 +44,7 @@ export default function Home() {
           variants={itemVariants}
           className="text-6xl font-bold text-white mb-12 drop-shadow-lg"
         >
-          تفكر باللي أفكر فيه؟ 🧠
+          تفكر باللي أفكر فيه؟ 🧠TESTTTT
         </motion.h1>
         
         <motion.div 

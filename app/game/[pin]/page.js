@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { getSocket } from '@/utils/socket';
-import { Confetti } from '@/components/ui/confetti';
+import { Confetti } from '@/app/components/ui/confetti';
 
 export default function GameRoom({ params }) {
   const searchParams = useSearchParams();

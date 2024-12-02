@@ -16,7 +16,7 @@ export default function HostGame() {
   const [avatar, setAvatar] = useState({ character: '👨', accessory: null, display: '👨' });
 
   useEffect(() => {
-    if (!socket) return;
+    //if (!socket) return;
 
     console.log('Socket connected, creating game...');
     socket.emit('create-game', { roundCount, roundTime });

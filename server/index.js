@@ -429,7 +429,7 @@ app.use((req, res, next) => {
 const port = process.env.PORT || 3000;
 
 // Listen on `port` and 0.0.0.0
-app.listen(port, "0.0.0.0", function () {
+httpServer.listen(port, "0.0.0.0", function () {
   console.log('==================================');
   console.log(`Server running on port ${PORT}`);
   console.log(`Allowed Origins: ${allowedOrigins.join(', ')}`);

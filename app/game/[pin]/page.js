@@ -76,7 +76,6 @@ export default function GameRoom({ params }) {
 
     // Set up event listeners
     socket.on('player-joined', (data) => {
-      playJoinSound();
       console.log('Player joined event received:', data);
       if (data && Array.isArray(data.players)) {
         setPlayers(data.players);

@@ -206,9 +206,9 @@ export default function GameRoom({ params }) {
       socket.on('round-completed', (results) => {
         if (alreadySubmitted == false) {
           handleSubmitGuess();
-          setGuessSubmitted(true);
         }
         playRoundComplete();
+        setGuessSubmitted(false);
         console.log('Round completed:', results);
         setRoundResults(results);
         setGameState('round-results');

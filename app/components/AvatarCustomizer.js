@@ -4,7 +4,6 @@ import { motion } from 'framer-motion';
 
 const AvatarCustomizer = ({ onSelect }) => {
   // Customization options
-  const skinColors = ['🏻', '🏼', '🏽', '🏾', '🏿'];
   //const accessories = ['🎩', '👑', '🎀', '🧢', '👓', '🕶️', '🪖', '🎭'];
   const baseCharacters = ['🎩', '👑', '🎀', '⚽', '👓', '🕶️', '🪖', '🎭', '🌺'];
   

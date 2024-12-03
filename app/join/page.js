@@ -15,7 +15,7 @@ export default function JoinGame() {
   const [pin, setPin] = useState('');
   const [playerName, setPlayerName] = useState('');
   const [error, setError] = useState('');
-  const [avatar, setAvatar] = useState({ character: '', accessory: null, display: '👨' });
+  const [avatar, setAvatar] = useState({ character: '👑', accessory: null, display: '👑' });
 
 
   

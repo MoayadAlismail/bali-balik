@@ -10,7 +10,7 @@ const gameStartSFX = "/assets/gameStart.mp3"
 const tickSFX = "/assets/clockTick.mp3"
 const roundCompleteSFX = "/assets/roundComplete.mp3"
 const gameEndSFX = "/assets/gameEnd.mp3"
-const betterRoundCompleteSFX = "/assets/roundCompleteButBetterLol"
+const betterRoundCompleteSFX = "/assets/roundCompleteButBetterLol.mp3"
 
 
 
@@ -221,6 +221,8 @@ export default function GameRoom({ params }) {
           handleSubmitGuess();
         }
         //playRoundComplete();
+        deleteThisLater();
+
         setGuessSubmitted(false);
         console.log('Round completed:', results);
         setRoundResults(results);
@@ -228,7 +230,6 @@ export default function GameRoom({ params }) {
       });
 
       socket.on('new-round', ({ topic, roundNumber, maxRounds, timeLeft }) => {
-        deleteThisLater();
         setCurrentTopic(topic);
         setRoundNumber(roundNumber);
         setMaxRounds(maxRounds);

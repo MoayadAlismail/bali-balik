@@ -84,6 +84,10 @@ export default function Home() {
           >
             انضم للعبة 🎮
           </motion.button>
+          <div className="fixed bottom-5 right-5 bg-black bg-opacity-60 text-white p-2 rounded-lg text-sm font-bold shadow-md">
+          This is an early access version! Some bugs may appear 🚧
+          هذه نسخة ليست مكتملة! قد تظهر بعض الأخطاء 🚧 
+        </div>
         </motion.div>
       </motion.div>
     </div>

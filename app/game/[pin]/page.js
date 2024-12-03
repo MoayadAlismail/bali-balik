@@ -9,6 +9,7 @@ const joinSFX = "/assets/joinSound.mp3"
 const gameStartSFX = "/assets/gameStart.mp3"
 const tickSFX = "/assets/clockTick.mp3"
 const roundCompleteSFX = "/assets/roundComplete.mp3"
+const gameEndSFX = "/assets/gameEnd.mp3"
 
 
 
@@ -50,6 +51,7 @@ export default function GameRoom({ params }) {
     new Audio(buttonSFX).play();
     return;
   })
+
   const playErrorSound = () => {
     new Audio(errorSFX).play();
     return;
@@ -66,6 +68,11 @@ export default function GameRoom({ params }) {
 
   const playRoundComplete = () => {
     new Audio(roundCompleteSFX).play();
+    return;
+  }
+
+ const playGameEnd = () => {
+    new Audio(gameEndSFX).play();
     return;
   }
 
@@ -228,6 +235,7 @@ export default function GameRoom({ params }) {
       socket.on('game-ended', ({ reason, finalScores }) => {
         if (reason === 'completed') {
           setScores(new Map(finalScores.map(({player, score}) => [player, score])));
+          playGameEnd();
           setGameState('game-over');
           // Trigger confetti after a short delay
           console.log("hello we are in socket.on");

@@ -256,10 +256,10 @@ export default function GameRoom({ params }) {
     }
     useEffect(() => {
       const thikr = [
-        "سبحان الله",
-        "لا اله إلا الله",
-        "الحمدلله",
-        "استغفر الله",    
+        "قول سبحان الله",
+        "قول لا اله إلا الله",
+        "قول الحمدلله",
+        "قول استغفر الله",    
         "صل على النبي",
       ];
       // Generate a random index to select a message
@@ -347,7 +347,7 @@ export default function GameRoom({ params }) {
               <div>
                 <div className="text-green-600 text-lg mb-4">
                   تم تقديم تخمينك! انتظار اللاعبين الآخرين...
-                  <h1 className="loading-text">{thikrMessage} بما إنك فاضي...</h1>
+                  <h1 className="loading-text"> بما إنك فاضي... {thikrMessage}</h1>
                 </div>
                 <div className="mt-4">
                   <h3 className="text-xl mb-2">التخمينات المقدمة:</h3>

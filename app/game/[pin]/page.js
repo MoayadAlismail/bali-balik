@@ -445,21 +445,21 @@ export default function GameRoom({ params }) {
   
         {gameState === 'game-over' && (
           <div className="text-center relative">
-            {/* Add Confetti component */}
-            <Confetti
-              ref={confettiRef}
-              className="absolute left-0 top-0 z-0 w-full h-full"
-              options={{
-                gravity: 0.5,
-                spread: 360,
-                ticks: 100,
-                decay: 0.94,
-                startVelocity: 30,
-                shapes: ['star'],
-                colors: ['#FFD700', '#FFA500', '#FF6B6B', '#FF9A8B'],
-              }}
-            />
-
+            <div className="fixed inset-0 pointer-events-none">
+              <Confetti
+                ref={confettiRef}
+                className="w-full h-screen"
+                options={{
+                  gravity: 0.5,
+                  spread: 360,
+                  ticks: 100,
+                  decay: 0.94,
+                  startVelocity: 30,
+                  shapes: ['star'],
+                  colors: ['#FFD700', '#FFA500', '#FF6B6B', '#FF9A8B'],
+                }}
+              />
+            </div>
             <h2 className="text-3xl mb-6">انتهت اللعبة!</h2>
             <div className="space-y-4">
               {Array.from(scores)

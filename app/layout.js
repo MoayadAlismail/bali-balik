@@ -8,8 +8,8 @@ const handjet = Handjet({
 })
 
 export const metadata = {
-  title: 'يلا نلعب! | لعبة جماعية ممتعة',
-  description: 'العب مع أصدقائك في أجواء ممتعة ومليئة بالتحدي',
+  title: 'بالي بالك | تفكر باللي أفكر فيه؟',
+  description: 'لعبة جماعية مع أصدقائك أو عائلتك تونس الجلسة',
 }
 
 export default function RootLayout({ children }) {

@@ -221,7 +221,6 @@ export default function GameRoom({ params }) {
           handleSubmitGuess();
         }
         //playRoundComplete();
-        deleteThisLater();
         setGuessSubmitted(false);
         console.log('Round completed:', results);
         setRoundResults(results);
@@ -229,6 +228,7 @@ export default function GameRoom({ params }) {
       });
 
       socket.on('new-round', ({ topic, roundNumber, maxRounds, timeLeft }) => {
+        deleteThisLater();
         setCurrentTopic(topic);
         setRoundNumber(roundNumber);
         setMaxRounds(maxRounds);

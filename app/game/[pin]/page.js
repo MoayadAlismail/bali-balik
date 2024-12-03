@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { getSocket } from '@/utils/socket';
 import { Confetti } from '@/app/components/ui/confetti';
@@ -36,25 +36,25 @@ export default function GameRoom({ params }) {
   const [roundResults, setRoundResults] = useState(null);
   const confettiRef = useRef(null);
   const [confettiTriggered, setConfettiTriggered] = useState(false);
+  const [thikrMessage, setThikr] = useState("");
+  const [alreadySubmitted, setGuessSubmitted] = useState(false);
 
 
   // Near the top of the component, parse the avatar from URL
   const avatarParam = searchParams.get('avatar');
   const playerAvatar = avatarParam ? JSON.parse(decodeURIComponent(avatarParam)) : null;
+ 
 
   //Initilazing sound functions
-  const playClickSound = () => {
+  const playClickSound = useCallback(() => {
     new Audio(buttonSFX).play();
     return;
-  }
+  })
   const playErrorSound = () => {
     new Audio(errorSFX).play();
     return;
   }
-  const playJoinSound = () => {
-    new Audio(joinSFX).play();
-    return;
-  }
+
   const playGameStartSound = () => {
     new Audio(gameStartSFX).play();
     return;
@@ -68,6 +68,15 @@ export default function GameRoom({ params }) {
     new Audio(roundCompleteSFX).play();
     return;
   }
+
+  const handleSubmitGuess = useCallback(() => {
+    if (!socket || !guess.trim()) return;
+    setGuessSubmitted(true);
+    playClickSound();
+    socket.emit('submit-guess', { pin, playerName, guess: guess.trim() });
+    setHasSubmitted(true);
+    setGuess('');
+  }, [socket, guess, pin, playerName, playClickSound]);
 
   // Join room when component mounts
   useEffect(() => {
@@ -112,20 +121,12 @@ export default function GameRoom({ params }) {
       socket.off('timer-update');
       socket.off('guesses-updated');
     };
-  }, [socket, pin, playerName, role, playerAvatar]);
+  }, [socket, pin, playerName, role, playerAvatar, playClickSound]);
 
     // Also add a useEffect to monitor players state changes
     useEffect(() => {
       console.log('Players state updated:', players);
     }, [players]);
-  
-    const handleSubmitGuess = () => {
-      if (!socket || !guess.trim()) return;
-      playClickSound();
-      socket.emit('submit-guess', { pin, playerName, guess: guess.trim() });
-      setHasSubmitted(true);
-      setGuess('');
-    };
   
     const startGame = () => {
       console.log('=== Start Game Function Called ===');
@@ -203,6 +204,10 @@ export default function GameRoom({ params }) {
       if (!socket) return;
 
       socket.on('round-completed', (results) => {
+        if (alreadySubmitted == false) {
+          handleSubmitGuess();
+          setGuessSubmitted(true);
+        }
         playRoundComplete();
         console.log('Round completed:', results);
         setRoundResults(results);
@@ -242,8 +247,26 @@ export default function GameRoom({ params }) {
         socket.off('new-round');
         socket.off('game-ended');
       };
-    }, [socket]);
+    }, [socket, confettiTriggered, alreadySubmitted, handleSubmitGuess]);
   
+
+    //Selects a random thikr
+    function getRandomIndex(max) {
+      return Math.floor(Math.random() * max);
+    }
+    useEffect(() => {
+      const thikr = [
+        "سبحان الله",
+        "لا اله إلا الله",
+        "الحمدلله",
+        "استغفر الله",    
+        "صل على النبي",
+      ];
+      // Generate a random index to select a message
+      const randomIndex = getRandomIndex(thikr.length);
+      setThikr(thikr[randomIndex]);
+    }, []); 
+
     // Add this function to trigger confetti
     const triggerWinnerConfetti = () => {
       confettiRef.current?.fire({
@@ -324,6 +347,7 @@ export default function GameRoom({ params }) {
               <div>
                 <div className="text-green-600 text-lg mb-4">
                   تم تقديم تخمينك! انتظار اللاعبين الآخرين...
+                  <h1 className="loading-text">{thikrMessage}</h1>
                 </div>
                 <div className="mt-4">
                   <h3 className="text-xl mb-2">التخمينات المقدمة:</h3>
@@ -370,6 +394,7 @@ export default function GameRoom({ params }) {
         {gameState === 'round-results' && roundResults && (
           <div className="text-center">
             <div className="mb-4 text-lg text-gray-600">
+              
               اكتملت الجولة {roundNumber} من {maxRounds}
             </div>
             <h2 className="text-2xl mb-4">نتائج الجولة</h2>

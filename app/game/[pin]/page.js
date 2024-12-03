@@ -251,8 +251,8 @@ export default function GameRoom({ params }) {
           if (!confettiTriggered) {
             setConfettiTriggered(true); // Prevent future triggers
             console.log("we are in if statement");
-    
-            setTimeout(triggerWinnerConfetti, 500); 
+            triggerWinnerConfetti();
+            //setTimeout(triggerWinnerConfetti, 500); 
           }
         }
       });

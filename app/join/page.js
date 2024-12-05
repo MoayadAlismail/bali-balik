@@ -102,8 +102,10 @@ export default function JoinGame() {
           animate={{ scale: 1 }}
           transition={{ type: "spring", stiffness: 300 }}
         >
-          انضم إلى لعبة
+          Join Game
         </motion.h1>
+
+        <h3>Choose your character</h3>
 
         <motion.div className="space-y-6">
           {/* Add Avatar Customizer */}
@@ -122,7 +124,7 @@ export default function JoinGame() {
           <div className="relative">
             <input
               type="text"
-              placeholder="ادخل رمز الغرفة"
+              placeholder="Enter room code"
               value={pin}
               onChange={(e) => {
                 setPin(e.target.value);
@@ -135,7 +137,7 @@ export default function JoinGame() {
           <div className="relative">
             <input
               type="text"
-              placeholder="ادخل اسمك"
+              placeholder="Enter your name"
               value={playerName}
               onChange={(e) => {
                 setPlayerName(e.target.value);
@@ -158,7 +160,7 @@ export default function JoinGame() {
               (!pin.trim() || !playerName.trim()) ? 'opacity-50 cursor-not-allowed' : ''
             }`}
           >
-            يلا نلعب 🎮
+            Let's Play 🎮
           </motion.button>
         </motion.div>
       </motion.div>

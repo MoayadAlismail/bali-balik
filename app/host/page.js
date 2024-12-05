@@ -102,7 +102,7 @@ export default function HostGame() {
           animate={{ scale: 1 }}
           transition={{ type: "spring", stiffness: 300 }}
         >
-          إنشاء لعبة جديدة
+          Create New Game
         </motion.h1>
 
         <motion.div className="space-y-6">
@@ -113,7 +113,7 @@ export default function HostGame() {
           <div className="space-y-4 mb-6">
             {/* Round Count Setting */}
             <div className="flex flex-col items-center">
-              <label className="text-lg mb-2">عدد الجولات</label>
+              <label className="text-lg mb-2">Number of Rounds</label>
               <div className="flex items-center space-x-4 rtl:space-x-reverse">
                 <motion.button
                   whileHover={{ scale: 1.1 }}
@@ -137,7 +137,7 @@ export default function HostGame() {
 
             {/* Round Time Setting */}
             <div className="flex flex-col items-center">
-              <label className="text-lg mb-2">الوقت لكل جولة (ثواني)</label>
+              <label className="text-lg mb-2">Time per Round (seconds)</label>
               <div className="flex items-center space-x-4 rtl:space-x-reverse">
                 <motion.button
                   whileHover={{ scale: 1.1 }}
@@ -163,7 +163,7 @@ export default function HostGame() {
           <div className="relative">
             <input
               type="text"
-              placeholder="ادخل اسمك"
+              placeholder="Enter your name"
               value={playerName}
               onChange={(e) => setPlayerName(e.target.value)}
               className="w-full p-4 text-2xl text-center border-3 border-[#FF9A8B] rounded-xl focus:border-[#FF6B6B] outline-none bg-white/50 backdrop-blur-sm transition-all mb-4"
@@ -190,7 +190,7 @@ export default function HostGame() {
               (!playerName.trim()) ? 'opacity-50 cursor-not-allowed' : ''
             }`}
           >
-            ابدأ اللعبة 🎮
+            Start Game 🎮
           </motion.button>
         </motion.div>
       </motion.div>

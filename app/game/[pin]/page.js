@@ -10,6 +10,7 @@ const gameStartSFX = "/assets/gameStart.mp3"
 const tickSFX = "/assets/clockTick.mp3"
 const roundCompleteSFX = "/assets/roundComplete.mp3"
 const gameEndSFX = "/assets/gameEnd.mp3"
+const betterRoundCompleteSFX = "/assets/roundCompleteButBetterLol.mp3"
 
 
 
@@ -76,6 +77,10 @@ export default function GameRoom({ params }) {
     return;
   }
   
+ const deleteThisLater = () => {
+  new Audio(betterRoundCompleteSFX).play();
+  return;
+}
 
   const handleSubmitGuess = useCallback(() => {
     if (!socket || !guess.trim()) return;
@@ -215,8 +220,9 @@ export default function GameRoom({ params }) {
         if (alreadySubmitted == false) {
           handleSubmitGuess();
         }
+        //playRoundComplete();
+        deleteThisLater();
 
-        playRoundComplete();
         setGuessSubmitted(false);
         console.log('Round completed:', results);
         setRoundResults(results);
@@ -234,28 +240,23 @@ export default function GameRoom({ params }) {
         setGameState('playing');
       });
       
-      socket.on('game-ended', ({ reason, finalScores }) => {
+      const handleGameEnded = ({ reason, finalScores }) => {
         if (reason === 'completed') {
           setScores(new Map(finalScores.map(({player, score}) => [player, score])));
           playGameEnd();
           setGameState('game-over');
-          // Trigger confetti after a short delay
-          console.log("hello we are in socket.on");
-  
-          if (!confettiTriggered) {
-            setConfettiTriggered(true); // Prevent future triggers
-            console.log("we are in if statement");
+          setTimeout(() => {
             triggerWinnerConfetti();
-            //setTimeout(triggerWinnerConfetti, 500); 
-          }
+          }, 100);
         }
-      });
+      };
 
+      socket.on('game-ended', handleGameEnded);
 
       return () => {
         socket.off('round-completed');
         socket.off('new-round');
-        socket.off('game-ended');
+        socket.off('game-ended', handleGameEnded);
       };
     }, [socket, confettiTriggered, alreadySubmitted, handleSubmitGuess]);
   
@@ -279,22 +280,27 @@ export default function GameRoom({ params }) {
 
     // Add this function to trigger confetti
     const triggerWinnerConfetti = () => {
-      confettiRef.current?.fire({
-        spread: 90,
-        decay: 0.91,
-        scalar: 0.8,
-        particleCount: 100,
-        origin: { y: 0.6 }
-      });
+      if (confettiRef.current) {
+        confettiRef.current.fire({
+          spread: 90,
+          decay: 0.91,
+          scalar: 0.8,
+          particleCount: 100,
+          origin: { y: 0.6 },
+          ticks: 100,
+          startVelocity: 30
+        });
+        setConfettiTriggered(true);
+      }
     };
   
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-8">
         {gameState === 'waiting' && (
           <div className="text-center">
-            <h2 className="text-2xl mb-4">كود الغرفة: {pin}</h2>
+            <h2 className="text-2xl mb-4">Room Code: {pin}</h2>
             <div className="mb-4">
-              <h3 className="text-xl mb-2">اللاعبين:</h3>
+              <h3 className="text-xl mb-2">Players:</h3>
               {players.length > 0 ? (
                 <ul className="space-y-2">
                   {players.map((player, index) => (
@@ -309,14 +315,14 @@ export default function GameRoom({ params }) {
                   ))}
                 </ul>
               ) : (
-                <p className="text-gray-500">لا يوجد لاعبين حتى الآن</p>
+                <p className="text-gray-500">No players yet</p>
               )}
             </div>
             {role === 'host' && players.length > 0 && (
               <button
                 onClick={startGame}
                 className="rounded-lg bg-white text-black px-6 py-3 hover:bg-gray-100 transition-colors font-semibold border-2 border-black active:transform active:scale-95">
-                ابدأ
+                Start
               </button>
             )}
           </div>
@@ -325,15 +331,15 @@ export default function GameRoom({ params }) {
         {gameState === 'playing' && (
           <div className="text-center">
             <div className="mb-4 text-lg text-gray-600">
-              الجولة {roundNumber} من {maxRounds}
+              Round {roundNumber} of {maxRounds}
             </div>
 
             <div className="mb-6">
               <div className="text-6xl font-bold mb-2">{timeLeft}</div>
-              <div className="text-sm text-gray-600">ثواني باقية</div>
+              <div className="text-sm text-gray-600">seconds left</div>
             </div>
             
-            <h2 className="text-2xl mb-4">الموضوع: {currentTopic}</h2>
+            <h2 className="text-2xl mb-4">Topic: {currentTopic}</h2>
             
             {!hasSubmitted ? (
               <div>
@@ -350,17 +356,16 @@ export default function GameRoom({ params }) {
                   onClick={handleSubmitGuess}
                   className="rounded-full bg-foreground text-background px-6 py-3"
                 >
-                  تقديم التخمين
+                  Submit Guess
                 </button>
               </div>
             ) : (
               <div>
                 <div className="text-green-600 text-lg mb-4">
-                  تم تقديم تخمينك! انتظار اللاعبين الآخرين...
-                  <h1 className="loading-text"> بما إنك فاضي... {thikrMessage}</h1>
+                  Guess submitted! Waiting for other players...
                 </div>
                 <div className="mt-4">
-                  <h3 className="text-xl mb-2">التخمينات المقدمة:</h3>
+                  <h3 className="text-xl mb-2">Submitted Guesses:</h3>
                   <div className="space-y-2">
                     {allGuesses.map((g, index) => (
                       <div key={index} className="p-2 bg-gray-50 rounded flex items-center gap-2">
@@ -372,7 +377,7 @@ export default function GameRoom({ params }) {
                     ))}
                   </div>
                   <div className="text-sm text-gray-500 mt-2">
-                    {allGuesses.length} من {totalPlayers} لاعبين قدموا تخميناتهم
+                    {allGuesses.length} of {totalPlayers} players have submitted
                   </div>
                 </div>
               </div>
@@ -404,34 +409,33 @@ export default function GameRoom({ params }) {
         {gameState === 'round-results' && roundResults && (
           <div className="text-center">
             <div className="mb-4 text-lg text-gray-600">
-              
-              اكتملت الجولة {roundNumber} من {maxRounds}
+              Round {roundNumber} of {maxRounds} completed
             </div>
-            <h2 className="text-2xl mb-4">نتائج الجولة</h2>
+            <h2 className="text-2xl mb-4">Round Results</h2>
             <div className="space-y-4">
               {roundResults.guessGroups.map(({ guess, players, points }, index) => (
                 <div key={index} className="p-4 bg-gray-50 rounded-lg">
                   <div className="font-bold text-lg">{guess}</div>
                   <div className="text-sm text-gray-600">
-                    {players.map(p => p.name).join(', ')} - {points} نقطة
+                    {players.map(p => p.name).join(', ')} - {points} points
                   </div>
                 </div>
               ))}
             </div>
             <div className="mt-6">
-              <h3 className="text-xl mb-2">النقاط الحالية:</h3>
+              <h3 className="text-xl mb-2">Current Scores:</h3>
               {roundResults.scores
                 .sort((a, b) => b.score - a.score)
                 .map(({ player, avatar, score }, index) => (
                   <div key={index} className="text-lg flex items-center justify-center space-x-2 rtl:space-x-reverse">
                     <span className="text-2xl">{avatar?.display}</span>
-                    <span>{player}: {score} نقطة</span>
+                    <span>{player}: {score} points</span>
                   </div>
                 ))}
             </div>
             {roundNumber < maxRounds && (
               <div className="mt-4 text-sm text-gray-600">
-                الجولة التالية تبدأ خلال 5 ثوان...
+                Next round starts in 5 seconds...
               </div>
             )}
           </div>
@@ -439,22 +443,20 @@ export default function GameRoom({ params }) {
   
         {gameState === 'game-over' && (
           <div className="text-center relative">
-            <div className="fixed inset-0 pointer-events-none">
-              <Confetti
-                ref={confettiRef}
-                className="w-full h-screen"
-                options={{
-                  gravity: 0.5,
-                  spread: 360,
-                  ticks: 100,
-                  decay: 0.94,
-                  startVelocity: 30,
-                  shapes: ['star'],
-                  colors: ['#FFD700', '#FFA500', '#FF6B6B', '#FF9A8B'],
-                }}
-              />
-            </div>
-            <h2 className="text-3xl mb-6">انتهت اللعبة!</h2>
+            <Confetti
+              ref={confettiRef}
+              className="fixed inset-0 w-full h-full pointer-events-none"
+              options={{
+                gravity: 0.5,
+                spread: 360,
+                ticks: 100,
+                decay: 0.94,
+                startVelocity: 30,
+                shapes: ['star'],
+                colors: ['#FFD700', '#FFA500', '#FF6B6B', '#FF9A8B']
+              }}
+            />
+            <h2 className="text-3xl mb-6">Game Over!</h2>
             <div className="space-y-4">
               {Array.from(scores)
                 .sort(([,a], [,b]) => b - a)
@@ -467,13 +469,13 @@ export default function GameRoom({ params }) {
                   >
                     <span>{index + 1}.</span>
                     {index === 0 && <span className="text-2xl">🏆</span>}
-                    <span>{playerName}: {score} نقطة</span>
+                    <span>{playerName}: {score} points</span>
                   </div>
                 ))}
             </div>
             {Array.from(scores).length > 0 && (
               <div className="mt-8 text-xl relative z-10">
-                🎉 مبروك {Array.from(scores)[0][0]}! 🎉
+                🎉 Congratulations {Array.from(scores)[0][0]}! 🎉
               </div>
             )}
           </div>

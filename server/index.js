@@ -29,8 +29,8 @@ app.prepare().then(() => {
   // Game state management
   const rooms = new Map();
   const topics = [
-    'حيوانات', 'طعام', 'رياضة', 'مدن',
-    'مهن', 'ألوان', 'أفلام', 'مشاهير'
+    'Animals', 'Food', 'Sports', 'Cities',
+    'Jobs', 'Colors', 'Movies', 'Celebrities'
   ];
 
   // Socket.IO setup

@@ -21,7 +21,7 @@ const AvatarCustomizer = ({ onSelect }) => {
 
   return (
     <div className="bg-white/90 backdrop-blur-md p-6 rounded-xl shadow-lg">
-      <h3 className="text-xl font-bold text-center mb-4">اختر شخصيتك</h3>
+      <h3 className="text-xl font-bold text-center mb-4">Pick your character</h3>
       
       {/* Preview */}
       <div className="text-center mb-6">
@@ -37,7 +37,7 @@ const AvatarCustomizer = ({ onSelect }) => {
 
       {/* Character Selection */}
       <div className="mb-6">
-        <h4 className="text-sm font-semibold mb-2">الشخصية</h4>
+        {/* <h4 className="text-sm font-semibold mb-2">Characters</h4> */}
         <div className="grid grid-cols-3 gap-2">
           {baseCharacters.map((char, index) => (
             <motion.button

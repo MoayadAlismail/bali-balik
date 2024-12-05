@@ -52,7 +52,7 @@ export default function Home() {
           variants={itemVariants}
           className="text-6xl font-bold text-white mb-12 drop-shadow-lg"
         >
-          تفكر باللي أفكر فيه؟ 🧠
+          Word Match
         </motion.h1>
 
         {/* Short paragraph explaining how to play */}
@@ -60,7 +60,7 @@ export default function Home() {
         variants={itemVariants}
         className="text-white text-lg mb-12 px-4 leading-relaxed max-w-2xl mx-auto bg-white/20 rounded-lg p-4 shadow-lg"
         >
-        اللعبة بسيطة وممتعة! 🎉 كل اللاعبين ياخذون نفس الموضوع، ومهمتهم إنهم يخمنون نفس الكلمة اللي تتعلق بالموضوع. مثلاً: لو كان الموضوع رياضة، اللاعبين يخمنون كرة القدم. كل ما زادت التخمينات المشتركة بين اللاعبين، زادت النقاط اللي يحصلونها. الفكرة إنكم تفكرون زي بعض وتدخلون جو! 😄        
+         A fun multiplayer word guessing game! 🎉 Players take turns guessing the word related to the topic. The more players guess the same word, the more points they earn. The goal is to guess the word with your friends! 😄        
         </motion.h3>
 
         <motion.div 
@@ -73,7 +73,7 @@ export default function Home() {
             className="w-72 p-5 bg-[#5C9CE5] text-white rounded-xl text-xl font-bold shadow-lg hover:shadow-xl transition-all duration-300"
             onClick={handleHostClick}
           >
-            إنشاء لعبة جديدة 🎲
+            Create Game 🎲
           </motion.button>
 
           <motion.button
@@ -82,7 +82,7 @@ export default function Home() {
             className="w-72 p-5 bg-[#4CAF50] text-white rounded-xl text-xl font-bold shadow-lg hover:shadow-xl transition-all duration-300"
             onClick={handleJoinClick}
           >
-            انضم للعبة 🎮
+            Join Game 🎮
           </motion.button>
           <div className="fixed bottom-5 right-5 bg-black bg-opacity-60 text-white p-2 rounded-lg text-sm font-bold shadow-md">
           This is an early access version! Some bugs may appear 🚧

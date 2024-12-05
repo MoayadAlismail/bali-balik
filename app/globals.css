@@ -122,3 +122,11 @@ input:focus {
     @apply bg-background text-foreground;
   }
 }
+
+.playerRow {
+  transition: all 0.3s ease;
+}
+
+.playerRow:hover {
+  transform: translateX(5px);
+}

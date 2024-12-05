@@ -135,12 +135,13 @@ export default function JoinGame() {
           <div className="relative">
             <input
               type="text"
-              placeholder="ادخل اسمك"
+              placeholder="اسمك"
               value={playerName}
               onChange={(e) => {
                 setPlayerName(e.target.value);
                 setError('');
               }}
+              maxLength={20}
               className="w-full p-4 text-2xl text-center border-3 border-[#FF9A8B] rounded-xl focus:border-[#FF6B6B] outline-none bg-white/50 backdrop-blur-sm transition-all"
             />
             {/* Show selected avatar next to name */}

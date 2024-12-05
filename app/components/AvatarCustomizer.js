@@ -37,7 +37,7 @@ const AvatarCustomizer = ({ onSelect }) => {
 
       {/* Character Selection */}
       <div className="mb-6">
-        <h4 className="text-sm font-semibold mb-2">الشخصية</h4>
+        {/* <h4 className="text-sm font-semibold mb-2">الشخصية</h4> */}
         <div className="grid grid-cols-3 gap-2">
           {baseCharacters.map((char, index) => (
             <motion.button

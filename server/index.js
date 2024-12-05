@@ -442,7 +442,7 @@ app.prepare().then(() => {
   // Listen on `port` and 0.0.0.0
   httpServer.listen(port, "0.0.0.0", function () {
     console.log('==================================');
-    console.log(`Server running on port ${PORT}`);
+    // console.log(`Server running on port ${PORT}`);
     console.log(`Environment: ${process.env.NODE_ENV}`);
     console.log(`Allowed Origins: ${allowedOrigins.join(', ')}`);
     console.log('==================================');

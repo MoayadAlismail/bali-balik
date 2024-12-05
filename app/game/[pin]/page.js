@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { getSocket } from '@/utils/socket';
+import { getSocket } from '@/utils/socketClient';
 import { Confetti } from '@/app/components/ui/confetti';
 const buttonSFX = "/assets/buttonClick.mp3";
 const errorSFX = "/assets/errorSFX.mp3"
@@ -10,7 +10,7 @@ const gameStartSFX = "/assets/gameStart.mp3"
 const tickSFX = "/assets/clockTick.mp3"
 const roundCompleteSFX = "/assets/roundComplete.mp3"
 const gameEndSFX = "/assets/gameEnd.mp3"
-const betterRoundCompleteSFX = "/assets/roundCompleteButBetterLol.mp3"
+
 
 
 
@@ -19,6 +19,9 @@ export default function GameRoom({ params }) {
   const role = searchParams.get('role');
   const playerName = searchParams.get('name');
   const pin = params.pin;
+  // Near the top of the component, parse the avatar from URL
+  const avatarParam = searchParams.get('avatar');
+  const playerAvatar = avatarParam ? JSON.parse(decodeURIComponent(avatarParam)) : null;
   
   // Initialize socket state using shared socket
   const [socket] = useState(() => getSocket());
@@ -26,7 +29,11 @@ export default function GameRoom({ params }) {
   const [currentTopic, setCurrentTopic] = useState('');
   const [guess, setGuess] = useState('');
   const [results, setResults] = useState(null);
-  const [players, setPlayers] = useState(playerName ? [playerName] : []);
+  const [players, setPlayers] = useState([{
+    name: playerName,
+    avatar: playerAvatar,
+    role: role
+  }]);
   const [timeLeft, setTimeLeft] = useState(null);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [submittedGuesses, setSubmittedGuesses] = useState([]);
@@ -42,10 +49,6 @@ export default function GameRoom({ params }) {
   const [alreadySubmitted, setGuessSubmitted] = useState(false);
 
 
-  // Near the top of the component, parse the avatar from URL
-  const avatarParam = searchParams.get('avatar');
-  const playerAvatar = avatarParam ? JSON.parse(decodeURIComponent(avatarParam)) : null;
- 
 
   //Initilazing sound functions
   const playClickSound = useCallback(() => {
@@ -76,11 +79,6 @@ export default function GameRoom({ params }) {
     new Audio(gameEndSFX).play();
     return;
   }
-  
- const deleteThisLater = () => {
-  new Audio(betterRoundCompleteSFX).play();
-  return;
-}
 
   const handleSubmitGuess = useCallback(() => {
     if (!socket || !guess.trim()) return;
@@ -95,90 +93,126 @@ export default function GameRoom({ params }) {
   useEffect(() => {
     if (!socket || !pin || !playerName || !role) return;
 
-    console.log('Joining room with:', { pin, playerName, role, avatar: playerAvatar });
-    socket.emit('join-room', { pin, playerName, role, avatar: playerAvatar });
+    const joinData = { pin, playerName, role, avatar: playerAvatar };
+    socket.emit('join-room', joinData);
 
-    // Set up event listeners
-    socket.on('player-joined', (data) => {
-      console.log('Player joined event received:', data);
-      if (data && Array.isArray(data.players)) {
-        setPlayers(data.players);
-      }
-    });
-
-    socket.on('game-started', (data) => {
-      playGameStartSound();
-      console.log('Game started with topic:', data.topic);
-      setGameState('playing');
-      setCurrentTopic(data.topic);
-      setTimeLeft(data.timeLeft);
-      setMaxRounds(data.maxRounds);
-    });
-
-    socket.on('timer-update', (time) => {
-      playClockTick();
-      setTimeLeft(time);
-    });
-
-    socket.on('guesses-updated', ({ guesses, totalPlayers }) => {
-      playClickSound();
-      console.log('Received updated guesses:', guesses);
-      setAllGuesses(guesses);
-      setTotalPlayers(totalPlayers);
-    });
-
-    // Cleanup
-    return () => {
-      socket.off('player-joined');
-      socket.off('game-started');
-      socket.off('timer-update');
-      socket.off('guesses-updated');
+    // Set up all game-related event listeners with room-specific events
+    const handlePlayerJoined = (data) => {
+        console.log('Received player-joined event:', data);
+        if (data && Array.isArray(data.players)) {
+            // Make sure we're not losing the current player's data
+            const updatedPlayers = data.players.map(player => ({
+                name: player.name,
+                avatar: player.avatar,
+                role: player.role
+            }));
+            console.log('Setting players to:', updatedPlayers);
+            setPlayers(updatedPlayers);
+        }
     };
-  }, [socket, pin, playerName, role, playerAvatar, playClickSound]);
+
+    const handleGameStarted = (data) => {
+        console.log('Game started data received:', data);
+        playGameStartSound();
+        
+        // Reset game state for new game
+        setHasSubmitted(false);
+        setGuess('');
+        setAllGuesses([]);
+        setGuessSubmitted(false);
+        
+        // Set up first round
+        setGameState('playing');
+        setCurrentTopic(data.topic);
+        setTimeLeft(data.timeLeft);
+        setMaxRounds(data.maxRounds);
+        setRoundNumber(data.roundNumber);
+    };
+
+    const handleTimerUpdate = (time) => {
+        if (allGuesses.length < totalPlayers) {
+            playClockTick();
+        }
+        setTimeLeft(time);
+    };
+
+    const handleGuessesUpdated = ({ guesses, totalPlayers }) => {
+        playClickSound();
+        setAllGuesses(guesses);
+        setTotalPlayers(totalPlayers);
+    };
+
+    const handleRoundCompleted = (results) => {
+        if (alreadySubmitted == false) {
+            handleSubmitGuess();
+        }
+        playRoundComplete();
+        setGuessSubmitted(false);
+        setRoundResults(results);
+        setGameState('round-results');
+    };
+
+    const handleGameEnded = (data) => {
+        playGameEnd();
+        setGameState('game-over');
+        
+        if (data?.finalScores) {
+            const scoresMap = new Map();
+            data.finalScores.forEach(({ player, score }) => {
+                scoresMap.set(player, score);
+            });
+            setScores(scoresMap);
+        }
+        
+        if (!confettiTriggered) {
+            setConfettiTriggered(true);
+            if (confettiRef.current) {
+                confettiRef.current.trigger();
+            }
+        }
+    };
+
+    // Listen for room-specific events
+    socket.on(`player-joined:${pin}`, handlePlayerJoined);
+    socket.on(`game-started:${pin}`, handleGameStarted);
+    socket.on(`timer-update:${pin}`, handleTimerUpdate);
+    socket.on(`guesses-updated:${pin}`, handleGuessesUpdated);
+    socket.on(`round-completed:${pin}`, handleRoundCompleted);
+    socket.on(`game-ended:${pin}`, handleGameEnded);
+
+    // Add this to debug players state changes
+    const debugInterval = setInterval(() => {
+        console.log('Current players:', players);
+    }, 2000);
+
+    // Cleanup function
+    return () => {
+        socket.off(`player-joined:${pin}`, handlePlayerJoined);
+        socket.off(`game-started:${pin}`, handleGameStarted);
+        socket.off(`timer-update:${pin}`, handleTimerUpdate);
+        socket.off(`guesses-updated:${pin}`, handleGuessesUpdated);
+        socket.off(`round-completed:${pin}`, handleRoundCompleted);
+        socket.off(`game-ended:${pin}`, handleGameEnded);
+        clearInterval(debugInterval);
+    };
+  }, [socket, pin, playerName, role, playerAvatar, allGuesses.length, totalPlayers, handleSubmitGuess, alreadySubmitted]);
 
     // Also add a useEffect to monitor players state changes
-    useEffect(() => {
-      console.log('Players state updated:', players);
-    }, [players]);
+    // useEffect(() => {
+    //   console.log('Players state updated:', players);
+    // }, [players]);
   
     const startGame = () => {
-      console.log('=== Start Game Function Called ===');
-      console.log('Socket state:', socket ? 'exists' : 'null');
-      console.log('Role:', role);
-      console.log('PIN:', pin);
+      if (!socket || role !== 'host') return;
       
-      if (!socket) {
-        playErrorSound();
-        console.error('❌ Cannot start game: Socket not initialized');
-        return;
-      }
-      
-      if (role === 'host') {
-        console.log('✅ Conditions met for starting game:');
-        console.log('- Is host');
-        console.log('- Socket connected:', socket.connected);
-        console.log('- Socket ID:', socket.id);
-        console.log('Emitting start-game event for pin:', pin);
-        
-        // Emit with acknowledgment callback
-        socket.emit('start-game', pin, (response) => {
+      socket.emit('start-game', pin, (response) => {
           if (response?.success) {
-            console.log('✅ Game started successfully:', response);
+              console.log('✅ Game started successfully:', response);
           } else {
-            playErrorSound();
-            console.error('❌ Failed to start game:', response?.error || 'No response');
+              playErrorSound();
+              console.error('❌ Failed to start game:', response?.error || 'No response');
           }
-        });
-  
-        // Add event listener for game-started
-        socket.on('game-started', (data) => {
-          playGameStartSound();
-          console.log('Received game-started event:', data);
-          setGameState('playing');
-          setCurrentTopic(data.topic);
-          setTimeLeft(data.timeLeft);
-        });
-      }
+      });
     };
   
     // Handle enter key press for submitting guess
@@ -220,9 +254,8 @@ export default function GameRoom({ params }) {
         if (alreadySubmitted == false) {
           handleSubmitGuess();
         }
-        //playRoundComplete();
-        deleteThisLater();
 
+        playRoundComplete();
         setGuessSubmitted(false);
         console.log('Round completed:', results);
         setRoundResults(results);
@@ -240,20 +273,28 @@ export default function GameRoom({ params }) {
         setGameState('playing');
       });
       
-      socket.on('game-ended', ({ reason, finalScores }) => {
-        if (reason === 'completed') {
-          setScores(new Map(finalScores.map(({player, score}) => [player, score])));
-          playGameEnd();
-          setGameState('game-over');
-          // Trigger confetti after a short delay
-          console.log("hello we are in socket.on");
-  
-          if (!confettiTriggered) {
-            setConfettiTriggered(true); // Prevent future triggers
-            console.log("we are in if statement");
-            triggerWinnerConfetti();
-            //setTimeout(triggerWinnerConfetti, 500); 
-          }
+      socket.on('game-ended', (data) => {
+        playGameEnd();
+        setGameState('game-over');
+        
+        // Clean up socket connection when game ends
+        socket.emit('leave-room', pin);
+        socket.disconnect();
+        
+        if (data?.finalScores) {
+            const scoresMap = new Map();
+            data.finalScores.forEach(({ player, score }) => {
+                scoresMap.set(player, score);
+            });
+            setScores(scoresMap);
+        }
+        
+        // Trigger confetti only once
+        if (!confettiTriggered) {
+            setConfettiTriggered(true);
+            if (confettiRef.current) {
+                confettiRef.current.trigger();
+            }
         }
       });
 
@@ -262,6 +303,10 @@ export default function GameRoom({ params }) {
         socket.off('round-completed');
         socket.off('new-round');
         socket.off('game-ended');
+        if (gameState === 'game-over') {
+            socket.emit('leave-room', pin);
+            socket.disconnect();
+        }
       };
     }, [socket, confettiTriggered, alreadySubmitted, handleSubmitGuess]);
   
@@ -301,19 +346,22 @@ export default function GameRoom({ params }) {
             <h2 className="text-2xl mb-4">كود الغرفة: {pin}</h2>
             <div className="mb-4">
               <h3 className="text-xl mb-2">اللاعبين:</h3>
-              {players.length > 0 ? (
-                <ul className="space-y-2">
-                  {players.map((player, index) => (
-                    <li key={index} className="text-lg flex items-center gap-2">
-                      <span className="text-2xl">
-                        {player.avatar?.display || '👤'}
-                      </span>
-                      <span>
-                        {player.name} {player.name === playerName && '(أنت)'}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+              {players && players.length > 0 ? (
+                <>
+                    <div className="text-sm mb-2">عدد اللاعبين: {players.length}</div>
+                    <ul className="space-y-2">
+                        {players.map((player, index) => (
+                            <li key={index} className="text-lg flex items-center justify-center gap-2">
+                                <span className="text-2xl">
+                                    {player.avatar?.display || '👤'}
+                                </span>
+                                <span>
+                                    {player.name} {player.name === playerName ? '(أنت)' : ''}
+                                </span>
+                            </li>
+                        ))}
+                    </ul>
+                </>
               ) : (
                 <p className="text-gray-500">لا يوجد لاعبين حتى الآن</p>
               )}
@@ -331,7 +379,7 @@ export default function GameRoom({ params }) {
         {gameState === 'playing' && (
           <div className="text-center">
             <div className="mb-4 text-lg text-gray-600">
-              الجولة {roundNumber} من {maxRounds}
+              الجولة {roundNumber} من {maxRounds || '...'}
             </div>
 
             <div className="mb-6">
@@ -349,7 +397,7 @@ export default function GameRoom({ params }) {
                   onChange={(e) => setGuess(e.target.value)}
                   onKeyPress={handleKeyPress}
                   className="mb-4 p-3 rounded border"
-                  placeholder="Enter your guess"
+                  placeholder="أكتب تخمينك"
                   autoFocus
                 />
                 <button
@@ -362,7 +410,7 @@ export default function GameRoom({ params }) {
             ) : (
               <div>
                 <div className="text-green-600 text-lg mb-4">
-                  تم تقديم تخمينك! انتظار اللاعبين الآخرين...
+                  تم تقديم تخمينك! انظار اللاعين الآخرين...
                   <h1 className="loading-text"> بما إنك فاضي... {thikrMessage}</h1>
                 </div>
                 <div className="mt-4">
@@ -390,7 +438,7 @@ export default function GameRoom({ params }) {
         {gameState === 'results' && (
           <div className="text-center">
             <h2 className="text-2xl mb-4">النتائج</h2>
-               <h2 className="text-2xl mb-4">التخمينات المقدمة</h2>
+               <h2 className="text-2xl mb-4">التخمينات القدمة</h2>
                 <ul>
                   {submittedGuesses.map((entry, index) => (
                     <li key={index}>
@@ -410,39 +458,90 @@ export default function GameRoom({ params }) {
         {gameState === 'round-results' && roundResults && (
           <div className="text-center">
             <div className="mb-4 text-lg text-gray-600">
-              
-              اكتملت الجولة {roundNumber} من {maxRounds}
+              اكتملت الجولة {roundNumber} من {maxRounds || '...'}
             </div>
             <h2 className="text-2xl mb-4">نتائج الجولة</h2>
-            <div className="space-y-4">
-              {roundResults.guessGroups.map(({ guess, players, points }, index) => (
-                <div key={index} className="p-4 bg-gray-50 rounded-lg">
-                  <div className="font-bold text-lg">{guess}</div>
-                  <div className="text-sm text-gray-600">
-                    {players.map(p => p.name).join(', ')} - {points} نقطة
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-6">
-              <h3 className="text-xl mb-2">النقاط الحالية:</h3>
-              {roundResults.scores
-                .sort((a, b) => b.score - a.score)
-                .map(({ player, avatar, score }, index) => (
-                  <div key={index} className="text-lg flex items-center justify-center space-x-2 rtl:space-x-reverse">
-                    <span className="text-2xl">{avatar?.display}</span>
-                    <span>{player}: {score} نقطة</span>
-                  </div>
-                ))}
-            </div>
-            {roundNumber < maxRounds && (
-              <div className="mt-4 text-sm text-gray-600">
-                الجولة التالية تبدأ خلال 5 ثوان...
+            <div className="w-full max-w-3xl mx-auto">
+              <h2 className="text-4xl font-bold text-center mb-8 text-white">Scoreboard</h2>
+              
+              {/* Leaderboard */}
+              <div className="space-y-3">
+                {roundResults.scores
+                  .sort((a, b) => b.score - a.score)
+                  .map(({ player, avatar, score }, index) => (
+                    <div
+                      key={player}
+                      className={`
+                        transform transition-all duration-300 hover:scale-102
+                        flex items-center justify-between
+                        p-4 rounded-xl shadow-lg
+                        ${index === 0 ? 'bg-gradient-to-r from-yellow-400 to-yellow-300 text-black' : 
+                          index === 1 ? 'bg-gradient-to-r from-slate-300 to-slate-200 text-black' :
+                          index === 2 ? 'bg-gradient-to-r from-amber-700 to-amber-600 text-white' :
+                          'bg-white text-black'}
+                      `}
+                    >
+                      {/* Position Badge */}
+                      <div className="flex items-center gap-4">
+                        <div className={`
+                          w-8 h-8 rounded-full flex items-center justify-center font-bold
+                          ${index === 0 ? 'bg-yellow-500' : 
+                            index === 1 ? 'bg-slate-400' :
+                            index === 2 ? 'bg-amber-800' : 'bg-blue-100'}
+                        `}>
+                          {index + 1}
+                        </div>
+
+                        {/* Player Info */}
+                        <div className="flex items-center gap-3">
+                          <span className="text-2xl">{avatar?.display || '👤'}</span>
+                          <span className="font-bold text-xl">{player}</span>
+                        </div>
+                      </div>
+
+                      {/* Score */}
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-2xl">{score}</span>
+                        {index < 3 && (
+                          <span className="animate-bounce">
+                            {index === 0 ? '👑' : index === 1 ? '🥈' : '🥉'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
               </div>
-            )}
+
+              {/* Submitted Guesses */}
+              <div className="mt-12">
+                <h3 className="text-2xl font-bold mb-4 text-white">Round Guesses</h3>
+                <div className="grid gap-3">
+                  {allGuesses.map((g, index) => (
+                    <div
+                      key={index}
+                      className="bg-white bg-opacity-90 rounded-lg p-4 shadow-lg
+                                transform transition-all duration-300 hover:scale-102
+                                border-l-4 border-blue-500"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <span className="text-2xl">
+                            {players.find(p => p.name === g.playerName)?.avatar?.display || '👤'}
+                          </span>
+                          <span className="font-semibold text-lg">{g.playerName}</span>
+                        </div>
+                        <div className="px-4 py-1 bg-blue-100 rounded-full font-medium">
+                          {g.guess}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         )}
-  
+
         {gameState === 'game-over' && (
           <div className="text-center relative">
             <div className="fixed inset-0 pointer-events-none">
@@ -486,4 +585,4 @@ export default function GameRoom({ params }) {
         )}
       </div>
     );
-} 
+}

@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { getSocket } from '@/utils/socket';
+import { getSocket } from '@/utils/socketClient';
 import AvatarCustomizer from '@/app/components/AvatarCustomizer';
 import Link from 'next/link';
 const buttonSFX = "/assets/buttonClick.mp3";
@@ -15,7 +15,7 @@ export default function HostGame() {
   const [socket] = useState(() => getSocket());
   const [gamePin, setGamePin] = useState('');
   const [roundCount, setRoundCount] = useState(5);
-  const [roundTime, setRoundTime] = useState(10);
+  const [roundTime, setRoundTime] = useState(15);
   const [avatar, setAvatar] = useState({ character: '👑', accessory: null, display: '👑' });
 
   const playClickSound = () => {
@@ -37,7 +37,7 @@ export default function HostGame() {
       return;
     }
 
-    console.log('Socket connected, creating game...');
+    console.log('Socket connected, creating game with round count: ', roundCount, '...');
     socket.emit('create-game', { roundCount, roundTime });
 
     
@@ -166,6 +166,7 @@ export default function HostGame() {
               placeholder="ادخل اسمك"
               value={playerName}
               onChange={(e) => setPlayerName(e.target.value)}
+              maxLength={20}
               className="w-full p-4 text-2xl text-center border-3 border-[#FF9A8B] rounded-xl focus:border-[#FF6B6B] outline-none bg-white/50 backdrop-blur-sm transition-all mb-4"
             />
             {/* Show selected avatar next to name */}

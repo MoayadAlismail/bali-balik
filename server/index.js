@@ -123,17 +123,18 @@ app.prepare().then(() => {
         console.log(`Host ${playerName} joined/rejoined room ${pin}`);
       }
       
-      // Update or add player with avatar
+      // Reset player scores when they rejoin
       const existingPlayerIndex = room.players.findIndex(p => p.name === playerName);
       if (existingPlayerIndex === -1) {
         room.players.push({
           name: playerName,
           avatar: avatar || { character: '', display: '👤' },
-          score: 0
+          score: 0  // Initialize score to 0
         });
       } else {
-        // Update existing player's avatar if they rejoin
+        // Update existing player's avatar and reset score
         room.players[existingPlayerIndex].avatar = avatar || room.players[existingPlayerIndex].avatar;
+        room.players[existingPlayerIndex].score = 0;  // Reset score to 0
       }
 
       socket.data.playerName = playerName;
@@ -179,11 +180,11 @@ app.prepare().then(() => {
           return;
         }
 
-        const topic = topics[Math.floor(Math.random() * topics.length)];
-        room.topic = topic;
+        // Reset room state for new game
+        room.currentRound = 0;  // Start at 0, will be incremented in startNextRound
         room.state = 'playing';
         room.guesses.clear();
-        room.currentRound = 0;
+        room.submittedGuesses = [];
         
         // Clear any existing timer
         if (room.timer) {
@@ -191,26 +192,10 @@ app.prepare().then(() => {
           room.timer = null;
         }
 
-        // Start new timer for first round
-        let timeLeft = room.roundTime;
-        room.timer = setInterval(() => {
-          timeLeft--;
-          
-          if (timeLeft <= 0) {
-            clearInterval(room.timer);
-            room.timer = null;
-            calculateAndEmitScores(room);
-          } else {
-            io.to(room.pin).emit('timer-update', timeLeft);
-          }
-        }, 1000);
-
-        io.to(room.pin).emit('game-started', { 
-          topic,
-          timeLeft: room.roundTime,
-          players: room.players
-        });
+        // Start the first round using startNextRound
+        startNextRound(room);
         
+        // Send success callback immediately
         callback?.({ success: true });
         
       } catch (error) {
@@ -244,10 +229,18 @@ app.prepare().then(() => {
       const room = rooms.get(pin);
       if (!room) return;
 
+      console.log(`Received guess from ${playerName} in room ${pin}:`, guess); // Debug log
+
       // Store the guess
-      const newGuess = { playerName, guess: guess.trim().toLowerCase(), timestamp: Date.now() };
+      const newGuess = { 
+        playerName, 
+        guess: guess.trim().toLowerCase(),
+        timestamp: Date.now() 
+      };
       room.submittedGuesses.push(newGuess);
       
+      console.log(`Current submitted guesses in room ${pin}:`, room.submittedGuesses); // Debug log
+
       // Check if all players have submitted
       const allPlayersSubmitted = room.submittedGuesses.length === room.players.length;
       
@@ -295,46 +288,63 @@ app.prepare().then(() => {
   const calculateAndEmitScores = (room) => {
     if (room.state === 'ended') return;
 
-    // Group guesses by the actual guess text
+    // Clear any existing timer first
+    if (room.timer) {
+        clearInterval(room.timer);
+        room.timer = null;
+    }
+
+    console.log('Calculating scores for submitted guesses:', room.submittedGuesses); // Debug log
+
+    // Group guesses by the actual guess text (case insensitive)
     const guessGroups = new Map();
     room.submittedGuesses.forEach(({ playerName, guess }) => {
-      if (!guessGroups.has(guess)) {
-        guessGroups.set(guess, []);
-      }
-      guessGroups.get(guess).push(playerName);
+        const normalizedGuess = guess.trim().toLowerCase();
+        if (!guessGroups.has(normalizedGuess)) {
+            guessGroups.set(normalizedGuess, []);
+        }
+        guessGroups.get(normalizedGuess).push(playerName);
     });
+
+    console.log('Grouped guesses:', Array.from(guessGroups.entries())); // Debug log
 
     // Calculate scores for this round
     guessGroups.forEach((players, guess) => {
-      const points = players.length * 100;
-      players.forEach(playerName => {
-        const player = room.players.find(p => p.name === playerName);
-        if (player) {
-          player.score = (player.score || 0) + points;
+        // Only award points if more than one player made the same guess
+        if (players.length > 1) {
+            const points = players.length * 100;
+            players.forEach(playerName => {
+                const player = room.players.find(p => p.name === playerName);
+                if (player) {
+                    player.score = (player.score || 0) + points;
+                    console.log(`Awarding ${points} points to ${playerName}. New score: ${player.score}`); // Debug log
+                }
+            });
         }
-      });
     });
 
-    // Prepare round results
+    // Prepare round results with all guesses and updated scores
     const roundResults = {
-      guessGroups: Array.from(guessGroups).map(([guess, players]) => ({
-        guess,
-        players: players.map(name => {
-          const player = room.players.find(p => p.name === name);
-          return {
-            name,
-            avatar: player?.avatar,
-            score: player?.score || 0
-          };
-        }),
-        points: players.length * 100
-      })),
-      scores: room.players.map(player => ({
-        player: player.name,
-        avatar: player.avatar,
-        score: player.score || 0
-      }))
+        guessGroups: Array.from(guessGroups).map(([guess, players]) => ({
+            guess,
+            players: players.map(name => {
+                const player = room.players.find(p => p.name === name);
+                return {
+                    name,
+                    avatar: player?.avatar,
+                    score: player?.score || 0
+                };
+            }),
+            points: players.length > 1 ? players.length * 100 : 0
+        })),
+        scores: room.players.map(player => ({
+            player: player.name,
+            avatar: player.avatar,
+            score: player.score || 0
+        })).sort((a, b) => b.score - a.score)
     };
+
+    console.log('Emitting round results:', roundResults); // Debug log
 
     // Emit round results
     io.to(room.pin).emit('round-completed', roundResults);
@@ -342,85 +352,93 @@ app.prepare().then(() => {
     // Clear submitted guesses for next round
     room.submittedGuesses = [];
     
-    // Start next round after a delay only if game hasn't ended
-    if (room.state !== 'ended') {
-      setTimeout(() => {
-        startNextRound(room);
-      }, 5000);
+    // Check if this was the last round
+    if (room.currentRound >= room.maxRounds) {
+        endGame(room);
+    } else {
+        // Start next round after a delay
+        setTimeout(() => {
+            if (room.state !== 'ended') {
+                startNextRound(room);
+            }
+        }, 5000);
     }
   };
 
-  // Add function to start next round
+  // Modify the startNextRound function to be more strict about round transitions
   const startNextRound = (room) => {
-    room.currentRound++;
+    console.log(`Starting next round. Current round: ${room.currentRound}, Max rounds: ${room.maxRounds}`);
     
+    // First check if we should end the game
     if (room.currentRound >= room.maxRounds) {
-      // Game is over
-      if (room.timer) {
-        clearInterval(room.timer);
-        room.timer = null;
-      }
-      
-      const finalScores = room.players.map(player => ({
-        player: player.name,
-        avatar: player.avatar,
-        score: player.score || 0
-      })).sort((a, b) => b.score - a.score);
-
-      io.to(room.pin).emit('game-ended', { 
-        reason: 'completed',
-        finalScores 
-      });
-
-      // Clean up the room state
-      room.state = 'ended';
-      room.submittedGuesses = [];
-      room.currentRound = 0;
-      
-      // Stop any further round processing
+      console.log('Max rounds reached, ending game');
+      endGame(room);
       return;
     }
 
-    // Only continue if the game hasn't ended
-    if (room.state !== 'ended') {
-      // Clear any existing timer
-      if (room.timer) {
+    // Make sure any existing timer is cleared
+    if (room.timer) {
+      clearInterval(room.timer);
+      room.timer = null;
+    }
+
+    // Increment round counter
+    room.currentRound++;
+    console.log(`Round ${room.currentRound} of ${room.maxRounds} starting`);
+
+    // Reset round state
+    room.topic = topics[Math.floor(Math.random() * topics.length)];
+    room.submittedGuesses = [];
+    room.state = 'playing';
+
+    // Start new timer
+    let timeLeft = room.roundTime;
+    room.timer = setInterval(() => {
+      if (room.state !== 'playing') {
         clearInterval(room.timer);
         room.timer = null;
+        return;
       }
 
-      // Start new round
-      const topic = topics[Math.floor(Math.random() * topics.length)];
-      room.topic = topic;
-      room.submittedGuesses = [];
+      timeLeft--;
+      io.to(room.pin).emit('timer-update', timeLeft);
+      
+      if (timeLeft <= 0) {
+        clearInterval(room.timer);
+        room.timer = null;
+        calculateAndEmitScores(room);
+      }
+    }, 1000);
 
-      // Start new timer for this round
-      let timeLeft = room.roundTime;
-      room.timer = setInterval(() => {
-        if (room.state === 'ended') {
-          clearInterval(room.timer);
-          room.timer = null;
-          return;
-        }
+    // Emit new round event
+    io.to(room.pin).emit('new-round', {
+      topic: room.topic,
+      roundNumber: room.currentRound,
+      maxRounds: room.maxRounds,
+      timeLeft: room.roundTime
+    });
+  };
 
-        timeLeft--;
-        
-        if (timeLeft <= 0) {
-          clearInterval(room.timer);
-          room.timer = null;
-          calculateAndEmitScores(room);
-        } else {
-          io.to(room.pin).emit('timer-update', timeLeft);
-        }
-      }, 1000);
-
-      io.to(room.pin).emit('new-round', {
-        topic,
-        roundNumber: room.currentRound + 1,
-        maxRounds: room.maxRounds,
-        timeLeft: room.roundTime
-      });
+  // Add a helper function to handle game ending
+  const endGame = (room) => {
+    if (room.timer) {
+      clearInterval(room.timer);
+      room.timer = null;
     }
+    
+    const finalScores = room.players.map(player => ({
+      player: player.name,
+      avatar: player.avatar,
+      score: player.score || 0
+    })).sort((a, b) => b.score - a.score);
+
+    io.to(room.pin).emit('game-ended', { 
+      reason: 'completed',
+      finalScores 
+    });
+
+    room.state = 'ended';
+    room.submittedGuesses = [];
   };
 
   // Add security headers middleware

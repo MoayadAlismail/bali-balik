@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { getSocket } from '@/utils/socketClient';
 import { Confetti } from '@/app/components/ui/confetti';
 const buttonSFX = "/assets/buttonClick.mp3";
@@ -47,6 +47,7 @@ export default function GameRoom({ params }) {
   const [confettiTriggered, setConfettiTriggered] = useState(false);
   const [thikrMessage, setThikr] = useState("");
   const [alreadySubmitted, setGuessSubmitted] = useState(false);
+  const router = useRouter();
 
 
 
@@ -89,6 +90,14 @@ export default function GameRoom({ params }) {
     setGuess('');
   }, [socket, guess, pin, playerName, playClickSound]);
 
+  // Add this function to handle auto-submission
+  const handleAutoSubmit = useCallback(() => {
+    if (!hasSubmitted && guess.trim()) {
+        socket.emit('submit-guess', { pin, playerName, guess: guess.trim() });
+        setHasSubmitted(true);
+    }
+  }, [socket, pin, playerName, guess, hasSubmitted]);
+
   // Join room when component mounts
   useEffect(() => {
     if (!socket || !pin || !playerName || !role) return;
@@ -126,14 +135,21 @@ export default function GameRoom({ params }) {
         setCurrentTopic(data.topic);
         setTimeLeft(data.timeLeft);
         setMaxRounds(data.maxRounds);
-        setRoundNumber(data.roundNumber);
+        setRoundNumber(data.roundNumber || 1);
+        
+        console.log(`Starting round ${data.roundNumber} of ${data.maxRounds}`);
     };
 
     const handleTimerUpdate = (time) => {
-        if (allGuesses.length < totalPlayers) {
+        setTimeLeft(time);
+        // Auto-submit when 1 second remains
+        if (time === 1 && !hasSubmitted) {
+            handleAutoSubmit();
+        }
+        // Play tick sound if time is less than 5 seconds
+        if (time <= 5 && !hasSubmitted) {
             playClockTick();
         }
-        setTimeLeft(time);
     };
 
     const handleGuessesUpdated = ({ guesses, totalPlayers }) => {
@@ -143,8 +159,9 @@ export default function GameRoom({ params }) {
     };
 
     const handleRoundCompleted = (results) => {
-        if (alreadySubmitted == false) {
-            handleSubmitGuess();
+        // Auto-submit if haven't submitted yet
+        if (!hasSubmitted) {
+            handleAutoSubmit();
         }
         playRoundComplete();
         setGuessSubmitted(false);
@@ -153,6 +170,7 @@ export default function GameRoom({ params }) {
     };
 
     const handleGameEnded = (data) => {
+        console.log('Game ended event received:', data); // Debug log
         playGameEnd();
         setGameState('game-over');
         
@@ -164,18 +182,30 @@ export default function GameRoom({ params }) {
             setScores(scoresMap);
         }
         
-        if (!confettiTriggered) {
-            setConfettiTriggered(true);
-            if (confettiRef.current) {
-                confettiRef.current.trigger();
+        // Trigger confetti with a slight delay to ensure component is mounted
+        setTimeout(() => {
+            if (confettiRef.current && !confettiTriggered) {
+                console.log('Triggering confetti'); // Debug log
+                setConfettiTriggered(true);
+                confettiRef.current.fire({
+                    spread: 90,
+                    decay: 0.91,
+                    scalar: 0.8,
+                    particleCount: 100,
+                    origin: { y: 0.6 },
+                    ticks: 100,
+                    startVelocity: 30,
+                    shapes: ['star'],
+                    colors: ['#FFD700', '#FFA500', '#FF6B6B', '#FF9A8B']
+                });
             }
-        }
+        }, 100);
     };
 
     // Listen for room-specific events
-    socket.on(`player-joined:${pin}`, handlePlayerJoined);
+    socket.on('player-joined', handlePlayerJoined);
     socket.on(`game-started:${pin}`, handleGameStarted);
-    socket.on(`timer-update:${pin}`, handleTimerUpdate);
+    socket.on(`timer-update`, handleTimerUpdate);
     socket.on(`guesses-updated:${pin}`, handleGuessesUpdated);
     socket.on(`round-completed:${pin}`, handleRoundCompleted);
     socket.on(`game-ended:${pin}`, handleGameEnded);
@@ -187,15 +217,15 @@ export default function GameRoom({ params }) {
 
     // Cleanup function
     return () => {
-        socket.off(`player-joined:${pin}`, handlePlayerJoined);
+        socket.off('player-joined', handlePlayerJoined);
         socket.off(`game-started:${pin}`, handleGameStarted);
-        socket.off(`timer-update:${pin}`, handleTimerUpdate);
+        socket.off(`timer-update`, handleTimerUpdate);
         socket.off(`guesses-updated:${pin}`, handleGuessesUpdated);
         socket.off(`round-completed:${pin}`, handleRoundCompleted);
         socket.off(`game-ended:${pin}`, handleGameEnded);
         clearInterval(debugInterval);
     };
-  }, [socket, pin, playerName, role, playerAvatar, allGuesses.length, totalPlayers, handleSubmitGuess, alreadySubmitted]);
+  }, [socket, pin, playerName, role, playerAvatar, allGuesses.length, totalPlayers, handleSubmitGuess, alreadySubmitted, hasSubmitted, handleAutoSubmit]);
 
     // Also add a useEffect to monitor players state changes
     // useEffect(() => {
@@ -205,13 +235,18 @@ export default function GameRoom({ params }) {
     const startGame = () => {
       if (!socket || role !== 'host') return;
       
+      // Immediately change game state to show we're starting
+      setGameState('playing');
+      
       socket.emit('start-game', pin, (response) => {
-          if (response?.success) {
-              console.log('✅ Game started successfully:', response);
-          } else {
-              playErrorSound();
-              console.error('❌ Failed to start game:', response?.error || 'No response');
-          }
+        if (response?.success) {
+          console.log('✅ Game started successfully:', response);
+        } else {
+          playErrorSound();
+          console.error('❌ Failed to start game:', response?.error || 'No response');
+          // Reset game state if there was an error
+          setGameState('waiting');
+        }
       });
     };
   
@@ -263,49 +298,49 @@ export default function GameRoom({ params }) {
       });
 
       socket.on('new-round', ({ topic, roundNumber, maxRounds, timeLeft }) => {
-        setCurrentTopic(topic);
-        setRoundNumber(roundNumber);
-        setMaxRounds(maxRounds);
-        setTimeLeft(timeLeft);
-        setHasSubmitted(false);
-        setAllGuesses([]);
-        setRoundResults(null);
-        setGameState('playing');
+        if (gameState !== 'ended') {
+            setCurrentTopic(topic);
+            setRoundNumber(roundNumber);
+            setMaxRounds(maxRounds);
+            setTimeLeft(timeLeft);
+            setHasSubmitted(false);
+            setAllGuesses([]);
+            setRoundResults(null);
+            setGameState('playing');
+            playGameStartSound();
+        }
       });
       
       socket.on('game-ended', (data) => {
         playGameEnd();
         setGameState('game-over');
         
-        // Clean up socket connection when game ends
-        socket.emit('leave-room', pin);
-        socket.disconnect();
-        
+        // Don't disconnect the socket here anymore
+        // Instead, just update the game state
         if (data?.finalScores) {
-            const scoresMap = new Map();
-            data.finalScores.forEach(({ player, score }) => {
-                scoresMap.set(player, score);
-            });
-            setScores(scoresMap);
+          const scoresMap = new Map();
+          data.finalScores.forEach(({ player, score }) => {
+            scoresMap.set(player, score);
+          });
+          setScores(scoresMap);
         }
         
-        // Trigger confetti only once
         if (!confettiTriggered) {
-            setConfettiTriggered(true);
-            if (confettiRef.current) {
-                confettiRef.current.trigger();
-            }
+          setConfettiTriggered(true);
+          if (confettiRef.current) {
+            confettiRef.current.trigger();
+          }
         }
       });
-
 
       return () => {
         socket.off('round-completed');
         socket.off('new-round');
         socket.off('game-ended');
-        if (gameState === 'game-over') {
-            socket.emit('leave-room', pin);
-            socket.disconnect();
+        // Only disconnect if actually leaving the room (not playing again)
+        if (gameState === 'game-over' && window.location.pathname !== `/game/${pin}`) {
+          socket.emit('leave-room', pin);
+          socket.disconnect();
         }
       };
     }, [socket, confettiTriggered, alreadySubmitted, handleSubmitGuess]);
@@ -318,7 +353,7 @@ export default function GameRoom({ params }) {
     useEffect(() => {
       const thikr = [
         "قول سبحان الله",
-        "قول لا اله إلا الله",
+        "قل لا اله إلا الله",
         "قول الحمدلله",
         "قول استغفر الله",    
         "صل على النبي",
@@ -330,13 +365,63 @@ export default function GameRoom({ params }) {
 
     // Add this function to trigger confetti
     const triggerWinnerConfetti = () => {
-      confettiRef.current?.fire({
-        spread: 90,
-        decay: 0.91,
-        scalar: 0.8,
-        particleCount: 100,
-        origin: { y: 0.6 }
-      });
+      if (confettiRef.current) {
+        confettiRef.current.fire({
+          spread: 90,
+          decay: 0.91,
+          scalar: 0.8,
+          particleCount: 100,
+          origin: { y: 0.6 },
+          ticks: 100,
+          startVelocity: 30
+        });
+        setConfettiTriggered(true);
+      }
+    };
+  
+    const handlePlayAgain = () => {
+      playClickSound();
+      // Reset game state
+      setGameState('waiting');
+      setConfettiTriggered(false);
+      setScores(new Map());
+      setRoundNumber(1);
+      setAllGuesses([]);
+      setRoundResults(null);
+      setHasSubmitted(false);
+      setGuessSubmitted(false);
+      
+      // No need to reconnect socket if it's already connected
+      const joinData = { pin, playerName, role, avatar: playerAvatar };
+      socket.emit('join-room', joinData);
+    };
+
+    const handleReturnHome = () => {
+      playClickSound();
+      // Properly cleanup before leaving
+      socket.emit('leave-room', pin);
+      socket.disconnect();
+      router.push('/');
+    };
+
+    const handleShareResults = async () => {
+      playClickSound();
+      const winner = Array.from(scores)[0];
+      const shareText = `لع��ت بالي بالك مع أصدقائي وفاز ${winner[0]} بـ ${winner[1]} نقطة! 🎮✨\n\nالعب معنا:\nhttps://balibalik.com`;
+      
+      try {
+        if (navigator.share) {
+          await navigator.share({
+            text: shareText
+          });
+        } else {
+          await navigator.clipboard.writeText(shareText);
+          // You might want to add a toast notification here
+          alert('تم نسخ النتائج!');
+        }
+      } catch (error) {
+        console.error('Error sharing:', error);
+      }
     };
   
     return (
@@ -462,59 +547,37 @@ export default function GameRoom({ params }) {
             </div>
             <h2 className="text-2xl mb-4">نتائج الجولة</h2>
             <div className="w-full max-w-3xl mx-auto">
-              <h2 className="text-4xl font-bold text-center mb-8 text-white">Scoreboard</h2>
-              
-              {/* Leaderboard */}
-              <div className="space-y-3">
-                {roundResults.scores
-                  .sort((a, b) => b.score - a.score)
-                  .map(({ player, avatar, score }, index) => (
-                    <div
-                      key={player}
-                      className={`
-                        transform transition-all duration-300 hover:scale-102
-                        flex items-center justify-between
-                        p-4 rounded-xl shadow-lg
-                        ${index === 0 ? 'bg-gradient-to-r from-yellow-400 to-yellow-300 text-black' : 
-                          index === 1 ? 'bg-gradient-to-r from-slate-300 to-slate-200 text-black' :
-                          index === 2 ? 'bg-gradient-to-r from-amber-700 to-amber-600 text-white' :
-                          'bg-white text-black'}
-                      `}
-                    >
-                      {/* Position Badge */}
-                      <div className="flex items-center gap-4">
-                        <div className={`
-                          w-8 h-8 rounded-full flex items-center justify-center font-bold
-                          ${index === 0 ? 'bg-yellow-500' : 
-                            index === 1 ? 'bg-slate-400' :
-                            index === 2 ? 'bg-amber-800' : 'bg-blue-100'}
-                        `}>
-                          {index + 1}
+              {/* Show Matching Guesses First */}
+              <div className="mb-8">
+                <h3 className="text-2xl font-bold mb-4 text-black">التخمينات المتطابقة</h3>
+                <div className="space-y-4">
+                  {roundResults.guessGroups.map(({ guess, players, points }, index) => (
+                    <div key={index} 
+                      className="bg-white rounded-lg p-4 shadow-lg border-l-4 border-green-500">
+                      <div className="flex justify-between items-center">
+                        <div className="flex-1">
+                          <div className="text-xl font-bold mb-2">{guess}</div>
+                          <div className="flex flex-wrap gap-2">
+                            {players.map((p, idx) => (
+                              <div key={idx} className="flex items-center gap-1 bg-green-100 rounded-full px-3 py-1">
+                                <span className="text-xl">{p.avatar?.display || '👤'}</span>
+                                <span>{p.name}</span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-
-                        {/* Player Info */}
-                        <div className="flex items-center gap-3">
-                          <span className="text-2xl">{avatar?.display || '👤'}</span>
-                          <span className="font-bold text-xl">{player}</span>
+                        <div className="text-2xl font-bold text-green-600">
+                          +{points} نقطة
                         </div>
-                      </div>
-
-                      {/* Score */}
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-2xl">{score}</span>
-                        {index < 3 && (
-                          <span className="animate-bounce">
-                            {index === 0 ? '👑' : index === 1 ? '🥈' : '🥉'}
-                          </span>
-                        )}
                       </div>
                     </div>
                   ))}
+                </div>
               </div>
 
-              {/* Submitted Guesses */}
-              <div className="mt-12">
-                <h3 className="text-2xl font-bold mb-4 text-white">Round Guesses</h3>
+              {/* Show All Submitted Guesses */}
+              <div className="mb-8">
+                <h3 className="text-2xl font-bold mb-4 text-black">جميع التخمينات</h3>
                 <div className="grid gap-3">
                   {allGuesses.map((g, index) => (
                     <div
@@ -538,27 +601,77 @@ export default function GameRoom({ params }) {
                   ))}
                 </div>
               </div>
+
+              {/* Show Current Leaderboard */}
+              <div>
+                <h3 className="text-2xl font-bold mb-4 text-black">الترتيب الحالي</h3>
+                <div className="space-y-3">
+                  {roundResults.scores
+                    .sort((a, b) => b.score - a.score)
+                    .map(({ player, avatar, score }, index) => (
+                      <div
+                        key={player}
+                        className={`
+                          transform transition-all duration-300 hover:scale-102
+                          flex items-center justify-between
+                          p-4 rounded-xl shadow-lg
+                          ${index === 0 ? 'bg-gradient-to-r from-yellow-400 to-yellow-300 text-black' : 
+                            index === 1 ? 'bg-gradient-to-r from-slate-300 to-slate-200 text-black' :
+                            index === 2 ? 'bg-gradient-to-r from-amber-700 to-amber-600 text-white' :
+                            'bg-white text-black'}
+                        `}
+                      >
+                        {/* Position Badge */}
+                        <div className="flex items-center gap-4">
+                          <div className={`
+                            w-8 h-8 rounded-full flex items-center justify-center font-bold
+                            ${index === 0 ? 'bg-yellow-500' : 
+                              index === 1 ? 'bg-slate-400' :
+                              index === 2 ? 'bg-amber-800' : 'bg-blue-100'}
+                          `}>
+                            {index + 1}
+                          </div>
+
+                          {/* Player Info */}
+                          <div className="flex items-center gap-3">
+                            <span className="text-2xl">{avatar?.display || '👤'}</span>
+                            <span className="font-bold text-xl">{player}</span>
+                          </div>
+                        </div>
+
+                        {/* Score */}
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-2xl">{score}</span>
+                          {index < 3 && (
+                            <span className="animate-bounce">
+                              {index === 0 ? '👑' : index === 1 ? '🥈' : '🥉'}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
             </div>
           </div>
         )}
 
         {gameState === 'game-over' && (
           <div className="text-center relative">
-            <div className="fixed inset-0 pointer-events-none">
-              <Confetti
-                ref={confettiRef}
-                className="w-full h-screen"
-                options={{
-                  gravity: 0.5,
-                  spread: 360,
-                  ticks: 100,
-                  decay: 0.94,
-                  startVelocity: 30,
-                  shapes: ['star'],
-                  colors: ['#FFD700', '#FFA500', '#FF6B6B', '#FF9A8B'],
-                }}
-              />
-            </div>
+            <Confetti
+              ref={confettiRef}
+              className="fixed inset-0 w-full h-full pointer-events-none"
+              options={{
+                gravity: 0.5,
+                spread: 360,
+                ticks: 100,
+                decay: 0.94,
+                startVelocity: 30,
+                shapes: ['star'],
+                colors: ['#FFD700', '#FFA500', '#FF6B6B', '#FF9A8B']
+              }}
+              manualstart={true}
+            />
             <h2 className="text-3xl mb-6">انتهت اللعبة!</h2>
             <div className="space-y-4">
               {Array.from(scores)
@@ -578,9 +691,35 @@ export default function GameRoom({ params }) {
             </div>
             {Array.from(scores).length > 0 && (
               <div className="mt-8 text-xl relative z-10">
-                🎉 مبروك {Array.from(scores)[0][0]}! 🎉
+                🎉 مبرك {Array.from(scores)[0][0]}!🎉
               </div>
             )}
+            
+            {/* Add the new buttons section */}
+            <div className="mt-8 space-y-4">
+              <div className="flex justify-center gap-4">
+                <button
+                  onClick={handlePlayAgain}
+                  className="px-6 py-3 bg-green-500 text-black rounded-lg hover:bg-green-600 transition-colors font-semibold"
+                >
+                  العب مرة ثانية 🎮
+                </button>
+                
+                <button
+                  onClick={handleShareResults}
+                  className="px-6 py-3 bg-blue-500 text-black rounded-lg hover:bg-blue-600 transition-colors font-semibold"
+                >
+                  شارك النتائج 🔗
+                </button>
+              </div>
+              
+              <button
+                onClick={handleReturnHome}
+                className="px-6 py-3 bg-gray-500 text-black rounded-lg hover:bg-gray-600 transition-colors font-semibold"
+              >
+                الصفحة الرئيسية 🏠
+              </button>
+            </div>
           </div>
         )}
       </div>

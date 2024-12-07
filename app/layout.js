@@ -21,12 +21,16 @@ export default function RootLayout({ children }) {
         <script 
           type="text/javascript" 
           src="https://cdn.weglot.com/weglot.min.js"
+          async
         />
         <script
+          async
           dangerouslySetInnerHTML={{
             __html: `
-              Weglot.initialize({
-                api_key: 'wg_ac65c208f7ceaf68132a894c73b20e960'
+              window.addEventListener('load', function() {
+                Weglot.initialize({
+                  api_key: 'wg_ac65c208f7ceaf68132a894c73b20e960'
+                });
               });
             `
           }}

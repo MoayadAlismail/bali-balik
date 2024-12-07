@@ -55,7 +55,7 @@ export default function GameRoom({ params }) {
   const playClickSound = useCallback(() => {
     new Audio(buttonSFX).play();
     return;
-  })
+  }, []);
 
   const playErrorSound = () => {
     new Audio(errorSFX).play();
@@ -225,7 +225,22 @@ export default function GameRoom({ params }) {
         socket.off(`game-ended:${pin}`, handleGameEnded);
         clearInterval(debugInterval);
     };
-  }, [socket, pin, playerName, role, playerAvatar, allGuesses.length, totalPlayers, handleSubmitGuess, alreadySubmitted, hasSubmitted, handleAutoSubmit]);
+  }, [
+    socket, 
+    pin, 
+    playerName, 
+    role, 
+    playerAvatar, 
+    allGuesses.length, 
+    totalPlayers, 
+    handleSubmitGuess, 
+    alreadySubmitted, 
+    hasSubmitted, 
+    handleAutoSubmit,
+    confettiTriggered,
+    playClickSound,
+    players
+  ]);
 
     // Also add a useEffect to monitor players state changes
     // useEffect(() => {
@@ -343,7 +358,14 @@ export default function GameRoom({ params }) {
           socket.disconnect();
         }
       };
-    }, [socket, confettiTriggered, alreadySubmitted, handleSubmitGuess]);
+    }, [
+      socket, 
+      confettiTriggered, 
+      alreadySubmitted, 
+      handleSubmitGuess,
+      gameState,
+      pin
+    ]);
   
 
     //Selects a random thikr
@@ -407,7 +429,7 @@ export default function GameRoom({ params }) {
     const handleShareResults = async () => {
       playClickSound();
       const winner = Array.from(scores)[0];
-      const shareText = `لع��ت بالي بالك مع أصدقائي وفاز ${winner[0]} بـ ${winner[1]} نقطة! 🎮✨\n\nالعب معنا:\nhttps://balibalik.com`;
+      const shareText = `لعت بالي بالك مع أصدقائي وفاز ${winner[0]} بـ ${winner[1]} نقطة! 🎮✨\n\nالعب معنا:\nhttps://balibalik.com`;
       
       try {
         if (navigator.share) {
@@ -684,7 +706,7 @@ export default function GameRoom({ params }) {
                     }`}
                   >
                     <span>{index + 1}.</span>
-                    {index === 0 && <span className="text-2xl">🏆</span>}
+                    {index === 0 && <span className="text-2xl">���</span>}
                     <span>{playerName}: {score} نقطة</span>
                   </div>
                 ))}

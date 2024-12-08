@@ -1,10 +1,11 @@
 export default {
   // Home page
-  title: "Bali Balik | Think what I'm thinking?",
+  title: "Are you thinking what I'm thinking?",
   description: "A group game to play with friends and family",
   createGame: "Create Game",
   joinGame: "Join Game",
   howToPlay: "How to Play",
+  gameExplanation: 'Join a room with friends, get a fun topic like "food," and submit the first word that comes to mind like 🍕 pizza or 🍔 burger or anything else. If someone else had the same word, you both score points! It is all about matching minds.',
   
   // Game setup
   enterName: "Enter your name",

@@ -2,10 +2,13 @@
 import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { useTranslation } from '@/contexts/LanguageContext'
+import LanguageSwitcher from '@/app/components/LanguageSwitcher'
 const buttonSFX = "/assets/buttonClick.mp3";
 
 export default function Home() {
   const router = useRouter()
+  const { t } = useTranslation()
    //defining the sound variables
    const playClickSound = () => {
     new Audio(buttonSFX).play();
@@ -42,6 +45,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-[#FF9A8B] to-[#FF6B6B]">
+      <LanguageSwitcher />
       <motion.div
         variants={containerVariants}
         initial="hidden"
@@ -52,15 +56,14 @@ export default function Home() {
           variants={itemVariants}
           className="text-6xl font-bold text-white mb-12 drop-shadow-lg"
         >
-          تفكر باللي أفكر فيه؟ 🧠
+          {t('title')}
         </motion.h1>
 
-        {/* Short paragraph explaining how to play */}
         <motion.h3
-        variants={itemVariants}
-        className="text-white text-lg mb-12 px-4 leading-relaxed max-w-2xl mx-auto bg-white/20 rounded-lg p-4 shadow-lg"
+          variants={itemVariants}
+          className="text-white text-lg mb-12 px-4 leading-relaxed max-w-2xl mx-auto bg-white/20 rounded-lg p-4 shadow-lg"
         >
-        اللعبة بسيطة وممتعة! 🎉 كل اللاعبين ياخذون نفس الموضوع، ومهمتهم إنهم يخمنون نفس الكلمة اللي تتعلق بالموضوع. مثلاً: لو كان الموضوع رياضة، اللاعبين يخمنون كرة القدم. كل ما زادت التخمينات المشتركة بين اللاعبين، زادت النقاط اللي يحصلونها. الفكرة إنكم تفكرون زي بعض وتدخلون جو! 😄        
+          {t('gameExplanation')}
         </motion.h3>
 
         <motion.div 
@@ -73,7 +76,7 @@ export default function Home() {
             className="w-72 p-5 bg-[#5C9CE5] text-white rounded-xl text-xl font-bold shadow-lg hover:shadow-xl transition-all duration-300"
             onClick={handleHostClick}
           >
-            إنشاء لعبة جديدة 🎲
+            {t('createGame')}
           </motion.button>
 
           <motion.button
@@ -82,12 +85,11 @@ export default function Home() {
             className="w-72 p-5 bg-[#4CAF50] text-white rounded-xl text-xl font-bold shadow-lg hover:shadow-xl transition-all duration-300"
             onClick={handleJoinClick}
           >
-            انضم للعبة 🎮
+            {t('joinGame')}
           </motion.button>
           <div className="fixed bottom-5 right-5 bg-black bg-opacity-60 text-white p-2 rounded-lg text-sm font-bold shadow-md">
-          This is an early access version! Some bugs may appear 🚧
-          هذه نسخة ليست مكتملة! قد تظهر بعض الأخطاء 🚧 
-        </div>
+            {t('earlyAccess')}
+          </div>
         </motion.div>
       </motion.div>
     </div>

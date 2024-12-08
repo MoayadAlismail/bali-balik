@@ -1,8 +1,11 @@
 'use client';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useTranslation } from '@/contexts/LanguageContext';
 
 const AvatarCustomizer = ({ onSelect }) => {
+  const { t } = useTranslation();
+  
   // Customization options
   //const accessories = ['🎩', '👑', '🎀', '🧢', '👓', '🕶️', '🪖', '🎭'];
   const baseCharacters = ['🎩', '👑', '🎀', '⚽', '👓', '🕶️', '🪖', '🎭', '🌺'];
@@ -21,7 +24,7 @@ const AvatarCustomizer = ({ onSelect }) => {
 
   return (
     <div className="bg-white/90 backdrop-blur-md p-6 rounded-xl shadow-lg">
-      <h3 className="text-xl font-bold text-center mb-4">اختر شخصيتك</h3>
+      <h3 className="text-xl font-bold text-center mb-4">{t('host.selectCharacter')}</h3>
       
       {/* Preview */}
       <div className="text-center mb-6">

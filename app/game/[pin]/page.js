@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { getSocket } from '@/utils/socketClient';
 import { Confetti } from '@/app/components/ui/confetti';
+import { useTranslation } from '@/contexts/LanguageContext';
 const buttonSFX = "/assets/buttonClick.mp3";
 const errorSFX = "/assets/errorSFX.mp3"
 const joinSFX = "/assets/joinSound.mp3"
@@ -15,6 +16,7 @@ const gameEndSFX = "/assets/gameEnd.mp3"
 
 
 export default function GameRoom({ params }) {
+  const { t } = useTranslation();
   const searchParams = useSearchParams();
   const role = searchParams.get('role');
   const playerName = searchParams.get('name');
@@ -55,7 +57,7 @@ export default function GameRoom({ params }) {
   const playClickSound = useCallback(() => {
     new Audio(buttonSFX).play();
     return;
-  }, []);
+  })
 
   const playErrorSound = () => {
     new Audio(errorSFX).play();
@@ -159,18 +161,23 @@ export default function GameRoom({ params }) {
     };
 
     const handleRoundCompleted = (results) => {
-        // Auto-submit if haven't submitted yet
         if (!hasSubmitted) {
             handleAutoSubmit();
         }
-        playRoundComplete();
+        
+        // Only play round complete sound if it's not the last round
+        if (roundNumber < maxRounds) {
+            playRoundComplete();
+        }
+        
         setGuessSubmitted(false);
         setRoundResults(results);
         setGameState('round-results');
     };
 
     const handleGameEnded = (data) => {
-        console.log('Game ended event received:', data); // Debug log
+        console.log('Game ended event received:', data);
+        // Only play game end sound, don't play round complete sound
         playGameEnd();
         setGameState('game-over');
         
@@ -182,24 +189,12 @@ export default function GameRoom({ params }) {
             setScores(scoresMap);
         }
         
-        // Trigger confetti with a slight delay to ensure component is mounted
-        setTimeout(() => {
-            if (confettiRef.current && !confettiTriggered) {
-                console.log('Triggering confetti'); // Debug log
-                setConfettiTriggered(true);
-                confettiRef.current.fire({
-                    spread: 90,
-                    decay: 0.91,
-                    scalar: 0.8,
-                    particleCount: 100,
-                    origin: { y: 0.6 },
-                    ticks: 100,
-                    startVelocity: 30,
-                    shapes: ['star'],
-                    colors: ['#FFD700', '#FFA500', '#FF6B6B', '#FF9A8B']
-                });
+        if (!confettiTriggered) {
+            setConfettiTriggered(true);
+            if (confettiRef.current) {
+                confettiRef.current.trigger();
             }
-        }, 100);
+        }
     };
 
     // Listen for room-specific events
@@ -225,22 +220,7 @@ export default function GameRoom({ params }) {
         socket.off(`game-ended:${pin}`, handleGameEnded);
         clearInterval(debugInterval);
     };
-  }, [
-    socket, 
-    pin, 
-    playerName, 
-    role, 
-    playerAvatar, 
-    allGuesses.length, 
-    totalPlayers, 
-    handleSubmitGuess, 
-    alreadySubmitted, 
-    hasSubmitted, 
-    handleAutoSubmit,
-    confettiTriggered,
-    playClickSound,
-    players
-  ]);
+  }, [socket, pin, playerName, role, playerAvatar, allGuesses.length, totalPlayers, handleSubmitGuess, alreadySubmitted, hasSubmitted, handleAutoSubmit]);
 
     // Also add a useEffect to monitor players state changes
     // useEffect(() => {
@@ -358,14 +338,7 @@ export default function GameRoom({ params }) {
           socket.disconnect();
         }
       };
-    }, [
-      socket, 
-      confettiTriggered, 
-      alreadySubmitted, 
-      handleSubmitGuess,
-      gameState,
-      pin
-    ]);
+    }, [socket, confettiTriggered, alreadySubmitted, handleSubmitGuess]);
   
 
     //Selects a random thikr
@@ -429,17 +402,16 @@ export default function GameRoom({ params }) {
     const handleShareResults = async () => {
       playClickSound();
       const winner = Array.from(scores)[0];
-      const shareText = `لعت بالي بالك مع أصدقائي وفاز ${winner[0]} بـ ${winner[1]} نقطة! 🎮✨\n\nالعب معنا:\nhttps://balibalik.com`;
+      const shareText = t('gameOver.shareText')
+        .replace('{winner}', winner[0])
+        .replace('{score}', winner[1]);
       
       try {
         if (navigator.share) {
-          await navigator.share({
-            text: shareText
-          });
+          await navigator.share({ text: shareText });
         } else {
           await navigator.clipboard.writeText(shareText);
-          // You might want to add a toast notification here
-          alert('تم نسخ النتائج!');
+          alert(t('copied'));
         }
       } catch (error) {
         console.error('Error sharing:', error);
@@ -450,12 +422,12 @@ export default function GameRoom({ params }) {
       <div className="min-h-screen flex flex-col items-center justify-center p-8">
         {gameState === 'waiting' && (
           <div className="text-center">
-            <h2 className="text-2xl mb-4">كود الغرفة: {pin}</h2>
+            <h2 className="text-2xl mb-4">{t('waiting.roomCode')} {pin}</h2>
             <div className="mb-4">
-              <h3 className="text-xl mb-2">اللاعبين:</h3>
+              <h3 className="text-xl mb-2">{t('waiting.players')}</h3>
               {players && players.length > 0 ? (
                 <>
-                    <div className="text-sm mb-2">عدد اللاعبين: {players.length}</div>
+                    <div className="text-sm mb-2">{t('waiting.playerCount')} {players.length}</div>
                     <ul className="space-y-2">
                         {players.map((player, index) => (
                             <li key={index} className="text-lg flex items-center justify-center gap-2">
@@ -463,21 +435,21 @@ export default function GameRoom({ params }) {
                                     {player.avatar?.display || '👤'}
                                 </span>
                                 <span>
-                                    {player.name} {player.name === playerName ? '(أنت)' : ''}
+                                    {player.name} {player.name === playerName ? t('waiting.you') : ''}
                                 </span>
                             </li>
                         ))}
                     </ul>
                 </>
               ) : (
-                <p className="text-gray-500">لا يوجد لاعبين حتى الآن</p>
+                <p className="text-gray-500">{t('waiting.noPlayers')}</p>
               )}
             </div>
             {role === 'host' && players.length > 0 && (
               <button
                 onClick={startGame}
                 className="rounded-lg bg-white text-black px-6 py-3 hover:bg-gray-100 transition-colors font-semibold border-2 border-black active:transform active:scale-95">
-                ابدأ
+                {t('waiting.start')}
               </button>
             )}
           </div>
@@ -486,15 +458,15 @@ export default function GameRoom({ params }) {
         {gameState === 'playing' && (
           <div className="text-center">
             <div className="mb-4 text-lg text-gray-600">
-              الجولة {roundNumber} من {maxRounds || '...'}
+              {t('playing.round')} {roundNumber} {t('playing.of')} {maxRounds || '...'}
             </div>
 
             <div className="mb-6">
               <div className="text-6xl font-bold mb-2">{timeLeft}</div>
-              <div className="text-sm text-gray-600">ثواني باقية</div>
+              <div className="text-sm text-gray-600">{t('playing.secondsLeft')}</div>
             </div>
             
-            <h2 className="text-2xl mb-4">الموضوع: {currentTopic}</h2>
+            <h2 className="text-2xl mb-4">{t('playing.topic')} {currentTopic}</h2>
             
             {!hasSubmitted ? (
               <div>
@@ -504,24 +476,24 @@ export default function GameRoom({ params }) {
                   onChange={(e) => setGuess(e.target.value)}
                   onKeyPress={handleKeyPress}
                   className="mb-4 p-3 rounded border"
-                  placeholder="أكتب تخمينك"
+                  placeholder={t('playing.enterGuess')}
                   autoFocus
                 />
                 <button
                   onClick={handleSubmitGuess}
                   className="rounded-full bg-foreground text-background px-6 py-3"
                 >
-                  تقديم التخمين
+                  {t('playing.submitGuess')}
                 </button>
               </div>
             ) : (
               <div>
                 <div className="text-green-600 text-lg mb-4">
-                  تم تقديم تخمينك! انظار اللاعين الآخرين...
-                  <h1 className="loading-text"> بما إنك فاضي... {thikrMessage}</h1>
+                  {t('playing.guessSubmitted')}
+                  <h1 className="loading-text">{t('playing.whileWaiting')} {thikrMessage}</h1>
                 </div>
                 <div className="mt-4">
-                  <h3 className="text-xl mb-2">التخمينات المقدمة:</h3>
+                  <h3 className="text-xl mb-2">{t('playing.submittedGuesses')}</h3>
                   <div className="space-y-2">
                     {allGuesses.map((g, index) => (
                       <div key={index} className="p-2 bg-gray-50 rounded flex items-center gap-2">
@@ -533,7 +505,7 @@ export default function GameRoom({ params }) {
                     ))}
                   </div>
                   <div className="text-sm text-gray-500 mt-2">
-                    {allGuesses.length} من {totalPlayers} لاعبين قدموا تخميناتهم
+                    {allGuesses.length} {t('playing.playersSubmitted')}
                   </div>
                 </div>
               </div>
@@ -565,13 +537,13 @@ export default function GameRoom({ params }) {
         {gameState === 'round-results' && roundResults && (
           <div className="text-center">
             <div className="mb-4 text-lg text-gray-600">
-              اكتملت الجولة {roundNumber} من {maxRounds || '...'}
+              {t('roundResults.roundComplete')} {roundNumber} {t('playing.of')} {maxRounds || '...'}
             </div>
-            <h2 className="text-2xl mb-4">نتائج الجولة</h2>
+            <h2 className="text-2xl mb-4">{t('roundResults.roundComplete')}</h2>
             <div className="w-full max-w-3xl mx-auto">
               {/* Show Matching Guesses First */}
               <div className="mb-8">
-                <h3 className="text-2xl font-bold mb-4 text-black">التخمينات المتطابقة</h3>
+                <h3 className="text-2xl font-bold mb-4 text-black">{t('roundResults.matchingGuesses')}</h3>
                 <div className="space-y-4">
                   {roundResults.guessGroups.map(({ guess, players, points }, index) => (
                     <div key={index} 
@@ -599,7 +571,7 @@ export default function GameRoom({ params }) {
 
               {/* Show All Submitted Guesses */}
               <div className="mb-8">
-                <h3 className="text-2xl font-bold mb-4 text-black">جميع التخمينات</h3>
+                <h3 className="text-2xl font-bold mb-4 text-black">{t('roundResults.allGuesses')}</h3>
                 <div className="grid gap-3">
                   {allGuesses.map((g, index) => (
                     <div
@@ -626,7 +598,7 @@ export default function GameRoom({ params }) {
 
               {/* Show Current Leaderboard */}
               <div>
-                <h3 className="text-2xl font-bold mb-4 text-black">الترتيب الحالي</h3>
+                <h3 className="text-2xl font-bold mb-4 text-black">{t('roundResults.currentStandings')}</h3>
                 <div className="space-y-3">
                   {roundResults.scores
                     .sort((a, b) => b.score - a.score)
@@ -694,7 +666,7 @@ export default function GameRoom({ params }) {
               }}
               manualstart={true}
             />
-            <h2 className="text-3xl mb-6">انتهت اللعبة!</h2>
+            <h2 className="text-3xl mb-6">{t('gameOver.gameEnded')}</h2>
             <div className="space-y-4">
               {Array.from(scores)
                 .sort(([,a], [,b]) => b - a)
@@ -706,14 +678,15 @@ export default function GameRoom({ params }) {
                     }`}
                   >
                     <span>{index + 1}.</span>
-                    {index === 0 && <span className="text-2xl">���</span>}
+                    {index === 0 && <span className="text-2xl">🏆</span>}
                     <span>{playerName}: {score} نقطة</span>
                   </div>
                 ))}
             </div>
             {Array.from(scores).length > 0 && (
               <div className="mt-8 text-xl relative z-10">
-                🎉 مبرك {Array.from(scores)[0][0]}!🎉
+                {t('gameOver.congratulations')}
+                {Array.from(scores)[0][0]}
               </div>
             )}
             
@@ -724,14 +697,14 @@ export default function GameRoom({ params }) {
                   onClick={handlePlayAgain}
                   className="px-6 py-3 bg-green-500 text-black rounded-lg hover:bg-green-600 transition-colors font-semibold"
                 >
-                  العب مرة ثانية 🎮
+                  {t('gameOver.playAgain')}
                 </button>
                 
                 <button
                   onClick={handleShareResults}
                   className="px-6 py-3 bg-blue-500 text-black rounded-lg hover:bg-blue-600 transition-colors font-semibold"
                 >
-                  شارك النتائج 🔗
+                  {t('gameOver.shareResults')}
                 </button>
               </div>
               
@@ -739,7 +712,7 @@ export default function GameRoom({ params }) {
                 onClick={handleReturnHome}
                 className="px-6 py-3 bg-gray-500 text-black rounded-lg hover:bg-gray-600 transition-colors font-semibold"
               >
-                الصفحة الرئيسية 🏠
+                {t('gameOver.home')}
               </button>
             </div>
           </div>

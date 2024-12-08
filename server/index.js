@@ -28,10 +28,16 @@ app.prepare().then(() => {
 
   // Game state management
   const rooms = new Map();
-  const topics = [
-    'حيوانات', 'طعام', 'رياضة', 'مدن',
-    'مهن', 'ألوان', 'أفلام', 'مشاهير'
-  ];
+  const topics = {
+    ar: [
+      'حيوانات', 'ط��م', 'رياضة', 'مدن',
+      'مهن', 'ألوان', 'أفلام', 'مشاهير'
+    ],
+    en: [
+      'Animals', 'Food', 'Sports', 'Cities',
+      'Professions', 'Colors', 'Movies', 'Celebrities'
+    ]
+  };
 
   // Socket.IO setup
   const io = new Server(httpServer, {
@@ -80,7 +86,7 @@ app.prepare().then(() => {
       console.error('Socket connection error:', error);
     });
 
-    socket.on('create-game', ({ roundCount = 5, roundTime = 60 }) => {
+    socket.on('create-game', ({ roundCount = 5, roundTime = 60, language = 'ar' }) => {
       console.log('Create game request received');
       const pin = Math.floor(1000 + Math.random() * 9000).toString();
       socket.join(pin);
@@ -98,7 +104,8 @@ app.prepare().then(() => {
         currentRound: 0,
         maxRounds: roundCount,
         roundTime: roundTime,
-        timer: null
+        timer: null,
+        language: language,
       });
       
       console.log(`Creating game with pin: ${pin}, rounds: ${roundCount}, time per round: ${roundTime}s`);
@@ -288,80 +295,74 @@ app.prepare().then(() => {
   const calculateAndEmitScores = (room) => {
     if (room.state === 'ended') return;
 
-    // Clear any existing timer first
-    if (room.timer) {
-        clearInterval(room.timer);
-        room.timer = null;
-    }
-
-    console.log('Calculating scores for submitted guesses:', room.submittedGuesses); // Debug log
+    console.log('Calculating scores for submitted guesses:', room.submittedGuesses);
 
     // Group guesses by the actual guess text (case insensitive)
     const guessGroups = new Map();
     room.submittedGuesses.forEach(({ playerName, guess }) => {
-        const normalizedGuess = guess.trim().toLowerCase();
-        if (!guessGroups.has(normalizedGuess)) {
-            guessGroups.set(normalizedGuess, []);
-        }
-        guessGroups.get(normalizedGuess).push(playerName);
+      const normalizedGuess = guess.trim().toLowerCase();
+      if (!guessGroups.has(normalizedGuess)) {
+        guessGroups.set(normalizedGuess, []);
+      }
+      guessGroups.get(normalizedGuess).push(playerName);
     });
 
-    console.log('Grouped guesses:', Array.from(guessGroups.entries())); // Debug log
+    console.log('Grouped guesses:', Array.from(guessGroups.entries()));
 
     // Calculate scores for this round
     guessGroups.forEach((players, guess) => {
-        // Only award points if more than one player made the same guess
-        if (players.length > 1) {
-            const points = players.length * 100;
-            players.forEach(playerName => {
-                const player = room.players.find(p => p.name === playerName);
-                if (player) {
-                    player.score = (player.score || 0) + points;
-                    console.log(`Awarding ${points} points to ${playerName}. New score: ${player.score}`); // Debug log
-                }
-            });
-        }
+      // Award points if more than one player made the same guess
+      if (players.length > 1) {
+        const points = players.length * 100;
+        players.forEach(playerName => {
+          const player = room.players.find(p => p.name === playerName);
+          if (player) {
+            // Initialize score if undefined
+            if (typeof player.score !== 'number') {
+              player.score = 0;
+            }
+            player.score += points;
+            console.log(`Awarded ${points} points to ${playerName}. New score: ${player.score}`);
+          }
+        });
+      }
     });
 
-    // Prepare round results with all guesses and updated scores
+    // Prepare round results
     const roundResults = {
-        guessGroups: Array.from(guessGroups).map(([guess, players]) => ({
-            guess,
-            players: players.map(name => {
-                const player = room.players.find(p => p.name === name);
-                return {
-                    name,
-                    avatar: player?.avatar,
-                    score: player?.score || 0
-                };
-            }),
-            points: players.length > 1 ? players.length * 100 : 0
-        })),
-        scores: room.players.map(player => ({
-            player: player.name,
-            avatar: player.avatar,
-            score: player.score || 0
-        })).sort((a, b) => b.score - a.score)
+      guessGroups: Array.from(guessGroups).map(([guess, players]) => ({
+        guess,
+        players: players.map(name => {
+          const player = room.players.find(p => p.name === name);
+          return {
+            name,
+            avatar: player?.avatar,
+            score: player?.score || 0
+          };
+        }),
+        points: players.length > 1 ? players.length * 100 : 0
+      })),
+      scores: room.players.map(player => ({
+        player: player.name,
+        avatar: player.avatar,
+        score: player.score || 0
+      })).sort((a, b) => b.score - a.score)
     };
 
-    console.log('Emitting round results:', roundResults); // Debug log
-
-    // Emit round results
+    console.log('Emitting round results:', roundResults);
     io.to(room.pin).emit('round-completed', roundResults);
 
     // Clear submitted guesses for next round
     room.submittedGuesses = [];
     
-    // Check if this was the last round
     if (room.currentRound >= room.maxRounds) {
-        endGame(room);
+      endGame(room);
     } else {
-        // Start next round after a delay
-        setTimeout(() => {
-            if (room.state !== 'ended') {
-                startNextRound(room);
-            }
-        }, 5000);
+      setTimeout(() => {
+        if (room.state !== 'ended') {
+          startNextRound(room);
+        }
+      }, 5000);
     }
   };
 
@@ -386,8 +387,11 @@ app.prepare().then(() => {
     room.currentRound++;
     console.log(`Round ${room.currentRound} of ${room.maxRounds} starting`);
 
+    // Select topic based on room's language preference
+    const languageTopics = topics[room.language] || topics.ar; // fallback to Arabic if language not found
+    room.topic = languageTopics[Math.floor(Math.random() * languageTopics.length)];
+
     // Reset round state
-    room.topic = topics[Math.floor(Math.random() * topics.length)];
     room.submittedGuesses = [];
     room.state = 'playing';
 

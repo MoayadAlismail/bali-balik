@@ -2,6 +2,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import { useTranslation } from '@/contexts/LanguageContext';
+import LanguageSwitcher from '@/app/components/LanguageSwitcher';
 import AvatarCustomizer from '@/app/components/AvatarCustomizer';
 import Link from 'next/link';
 const buttonSFX = "/assets/buttonClick.mp3";
@@ -10,7 +12,8 @@ const joinSFX = "/assets/joinSound.mp3"
 
 
 
-export default function JoinGame() {
+export default function Join() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [pin, setPin] = useState('');
   const [playerName, setPlayerName] = useState('');
@@ -76,92 +79,69 @@ export default function JoinGame() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#FF9A8B] to-[#FF6B6B] p-4">
-      <Link 
-        href="/"
-        className="fixed top-4 left-4 z-50 bg-white/90 p-3 rounded-full shadow-lg hover:bg-white transition-colors md:absolute"
-      >
-        <motion.div
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          className="text-2xl"
-          onClick={playClickSound}
-        >
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-[#FF9A8B] to-[#FF6B6B]">
+      <LanguageSwitcher />
+      <Link href="/" className="fixed top-4 left-4 z-50 bg-white/90 p-3 rounded-full shadow-lg hover:bg-white transition-colors">
+        <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} className="text-2xl">
           ↩️
         </motion.div>
       </Link>
 
       <motion.div
-        initial={{ y: -20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        className="bg-white/90 backdrop-blur-md p-8 rounded-2xl shadow-2xl w-full max-w-md"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white/90 backdrop-blur-sm p-8 rounded-3xl shadow-xl w-full max-w-md mx-auto"
       >
-        <motion.h1 
-          className="text-4xl font-bold text-[#FF6B6B] mb-8 text-center"
-          initial={{ scale: 0.9 }}
-          animate={{ scale: 1 }}
-          transition={{ type: "spring", stiffness: 300 }}
-        >
-          انضم إلى لعبة
-        </motion.h1>
+        <h1 className="text-4xl font-bold text-center mb-8">{t('join.title')}</h1>
 
-        <motion.div className="space-y-6">
-          {/* Add Avatar Customizer */}
-          <AvatarCustomizer onSelect={setAvatar} />
+        <div className="space-y-6">
+          <div className="text-center mb-6">
+            <AvatarCustomizer onSelect={setAvatar} />
+          </div>
 
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-center"
-            >
-              {error}
-            </motion.div>
-          )}
-
-          <div className="relative">
+          <div>
             <input
               type="text"
-              placeholder="ادخل رمز الغرفة"
               value={pin}
               onChange={(e) => {
                 setPin(e.target.value);
                 setError('');
               }}
-              className="w-full p-4 text-2xl text-center border-3 border-[#FF9A8B] rounded-xl focus:border-[#FF6B6B] outline-none bg-white/50 backdrop-blur-sm transition-all mb-4"
+              placeholder={t('join.pinPlaceholder')}
+              className="w-full p-4 text-lg text-center rounded-xl border-2 border-gray-200 focus:border-[#FF6B6B] focus:outline-none transition-colors"
+              maxLength={4}
             />
           </div>
 
-          <div className="relative">
+          <div>
             <input
               type="text"
-              placeholder="اسمك"
               value={playerName}
               onChange={(e) => {
                 setPlayerName(e.target.value);
                 setError('');
               }}
+              placeholder={t('join.namePlaceholder')}
+              className="w-full p-4 text-lg text-center rounded-xl border-2 border-gray-200 focus:border-[#FF6B6B] focus:outline-none transition-colors"
               maxLength={20}
-              className="w-full p-4 text-2xl text-center border-3 border-[#FF9A8B] rounded-xl focus:border-[#FF6B6B] outline-none bg-white/50 backdrop-blur-sm transition-all"
             />
-            {/* Show selected avatar next to name */}
-            <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-2xl">
-              {avatar.display}
-            </div>
           </div>
 
+          {error && (
+            <p className="text-red-500 text-center">
+              {error}
+            </p>
+          )}
+
           <motion.button
-            whileHover={{ scale: 1.05, backgroundColor: '#FF6B6B' }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={handleJoin}
-            disabled={!pin.trim() || !playerName.trim()}
-            className={`w-full p-4 bg-[#FF9A8B] text-white rounded-xl text-xl font-bold shadow-lg hover:shadow-xl transition-all duration-300 ${
-              (!pin.trim() || !playerName.trim()) ? 'opacity-50 cursor-not-allowed' : ''
-            }`}
+            className="w-full p-4 bg-[#FF6B6B] text-white text-xl font-semibold rounded-xl hover:bg-[#FF9A8B] transition-colors"
           >
-            يلا نلعب 🎮
+            {t('join.joinButton')} 🎮
           </motion.button>
-        </motion.div>
+        </div>
       </motion.div>
     </div>
   );

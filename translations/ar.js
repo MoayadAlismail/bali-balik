@@ -16,7 +16,7 @@ export default {
   
   // Game states
   waiting: {
-    roomCode: "رمز ��لغرفة: ",
+    roomCode: "رمز الغرفة: ",
     players: "اللاعبين:",
     playerCount: "عدد اللاعبين: ",
     you: "(أنت)",
